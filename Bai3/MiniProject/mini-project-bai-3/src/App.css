@@ -1,0 +1,23 @@
+/* Tổng thể */
+body { margin: 0; font-family: 'Inter', sans-serif; background: #f8f9fa; }
+a { text-decoration: none; color: inherit; }
+
+/* Client Layout */
+.client-header { background: #2d3436; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+.client-nav a { margin-left: 20px; color: #dfe6e9; transition: 0.3s; }
+.client-nav a:hover { color: #55efc4; }
+.main-content { min-height: 80vh; padding: 40px; }
+
+/* Admin Layout - Sidebar */
+.admin-container { display: flex; height: 100vh; }
+.sidebar { width: 260px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; }
+.sidebar h2 { color: #1abc9c; font-size: 1.5rem; margin-bottom: 30px; }
+.sidebar-link { padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; transition: 0.3s; display: block; }
+.sidebar-link:hover { background: #34495e; }
+.sidebar-link.active { background: #1abc9c; color: white; font-weight: bold; }
+.admin-main { flex: 1; background: white; padding: 30px; overflow-y: auto; }
+
+/* Component Styles */
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+.product-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }
+.btn-admin { margin-top: 20px; padding: 10px 20px; background: #0984e3; color: white; border: none; border-radius: 5px; cursor: pointer; }
