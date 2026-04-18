@@ -1,0 +1,9 @@
+.topbar { background: #2c3e50; color: white; display: flex; justify-content: space-between; padding: 15px 30px; }
+.top-nav a { color: white; margin-left: 20px; text-decoration: none; }
+.employee-wrapper { display: flex; height: calc(100vh - 60px); }
+.sub-sidebar { width: 220px; background: #f4f4f4; padding: 20px; border-right: 1px solid #ddd; }
+.sub-link { display: block; padding: 10px; color: #333; text-decoration: none; border-radius: 4px; }
+.sub-link.active { background: #3498db; color: white; }
+.employee-content { flex: 1; padding: 20px; }
+.card { background: #eee; padding: 20px; border-radius: 8px; flex: 1; text-align: center; }
+.list-item { padding: 10px; border-bottom: 1px solid #eee; list-style: none; }
