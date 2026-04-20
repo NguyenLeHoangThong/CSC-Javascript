@@ -1,0 +1,17 @@
+.container {
+  padding: 30px;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  max-width: 400px;
+  margin: 50px auto;
+}
+
+.status-success {
+  color: #2ecc71; /* Màu xanh lá cho thành công */
+}
+
+.status-error {
+  color: #e74c3c; /* Màu đỏ cho yêu cầu hành động */
+}

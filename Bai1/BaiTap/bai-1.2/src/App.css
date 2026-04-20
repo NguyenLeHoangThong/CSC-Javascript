@@ -1,0 +1,30 @@
+.container {
+  padding: 20px;
+  font-family: sans-serif;
+  max-width: 600px;
+  margin: auto;
+}
+
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.product-name {
+  font-weight: bold;
+}
+
+.product-price {
+  color: #e44d26;
+  font-weight: bold;
+}
