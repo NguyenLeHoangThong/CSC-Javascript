@@ -1,0 +1,76 @@
+.app-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f1f3f5;
+  font-family: 'Arial', sans-serif;
+}
+
+.deal-card {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  width: 380px;
+}
+
+.deal-title {
+  color: #e67e22;
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.deal-status {
+  color: #666;
+  font-size: 16px;
+}
+
+.countdown-number {
+  font-size: 60px;
+  font-weight: bold;
+  margin: 20px 0;
+  color: #333;
+}
+
+.red-text {
+  color: #ff4d4f;
+}
+
+.expire-text {
+  color: #ff4d4f;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.missed-text {
+  font-size: 20px;
+  color: #444;
+  margin-bottom: 25px;
+}
+
+.close-btn {
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.reset-btn {
+  background-color: #52c41a;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.close-btn:hover, .reset-btn:hover {
+  opacity: 0.8;
+}

@@ -1,0 +1,48 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.monitor-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.width-display {
+  font-size: 72px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  transition: color 0.3s ease;
+}
+
+/* Màu xanh cho Desktop như trong ảnh */
+.desktop-color {
+  color: #2d6a4f;
+}
+
+/* Màu đỏ cho Mobile như trong ảnh */
+.mobile-color {
+  color: #e63946;
+}
+
+.device-type {
+  font-size: 20px;
+  color: #555;
+  font-weight: 500;
+}
