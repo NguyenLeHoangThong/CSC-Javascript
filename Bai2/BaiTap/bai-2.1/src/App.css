@@ -1,0 +1,48 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f5f5f5;
+  font-family: sans-serif;
+}
+
+.card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  min-width: 300px;
+}
+
+.text-display {
+  color: #61dafb; /* Màu đặc trưng của React */
+  margin-bottom: 30px;
+  font-size: 32px;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-hide {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.btn-show {
+  background-color: #52c41a;
+  color: white;
+}
+
+.toggle-btn:hover {
+  opacity: 0.8;
+}

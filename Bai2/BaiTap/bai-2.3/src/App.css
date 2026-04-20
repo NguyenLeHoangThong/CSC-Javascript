@@ -1,0 +1,67 @@
+.wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f4f8;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.todo-card {
+  background: white;
+  padding: 30px;
+  border-radius: 24px; /* Bo góc lớn */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 450px;
+}
+
+.title {
+  font-size: 20px;
+  margin-bottom: 25px;
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.input-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.todo-input {
+  flex: 1;
+  padding: 12px 18px;
+  border: 2px solid #3b82f6; /* Viền xanh đặc trưng */
+  border-radius: 12px;
+  font-size: 18px;
+  outline: none;
+}
+
+.add-button {
+  padding: 0 30px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-button:hover {
+  background-color: #2563eb;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-item {
+  font-size: 18px;
+  color: #333;
+  padding: 5px 15px;
+}

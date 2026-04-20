@@ -1,0 +1,52 @@
+.wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f4f8;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.search-card {
+  background: white;
+  padding: 30px;
+  border-radius: 24px; /* Bo góc lớn như ảnh mẫu */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 400px;
+}
+
+.title {
+  font-size: 20px;
+  margin-bottom: 20px;
+  color: #1a1a1a;
+}
+
+.search-input {
+  width: 100%;
+  padding: 15px 20px;
+  border: 2px solid #3b82f6; /* Viền xanh chủ đạo */
+  border-radius: 12px;
+  font-size: 18px;
+  box-sizing: border-box;
+  outline: none;
+  margin-bottom: 20px;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 10px;
+}
+
+.result-item {
+  font-size: 20px;
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.no-result {
+  color: #999;
+  font-style: italic;
+}

@@ -1,0 +1,51 @@
+.wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f4f8; /* Nền xanh nhạt phía sau */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.char-counter-card {
+  background: white;
+  padding: 30px;
+  border-radius: 20px; /* Bo góc lớn như trong hình */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 400px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #4a90e2; /* Viền xanh chủ đạo */
+  border-radius: 10px;
+  font-size: 18px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-field.input-error {
+  border-color: #4a90e2; /* Trong hình vẫn giữ viền xanh dù quá dài */
+}
+
+.count-text {
+  font-size: 18px;
+  margin: 15px 0 5px 0;
+  color: #000;
+}
+
+.error-message {
+  color: #e74c3c; /* Màu đỏ cảnh báo */
+  font-size: 16px;
+  margin: 10px 0 0 0;
+}
