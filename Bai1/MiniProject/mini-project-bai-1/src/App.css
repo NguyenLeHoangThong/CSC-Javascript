@@ -1,0 +1,44 @@
+.container {
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.product-grid {
+  display: flex;
+  gap: 20px; /* Khoảng cách giữa các card */
+  flex-wrap: wrap; /* Tự xuống hàng nếu màn hình nhỏ */
+}
+
+.product-card {
+  border: 1px solid #d1d1d1;
+  border-radius: 15px;
+  padding: 20px;
+  width: 300px; /* Độ rộng cố định cho mỗi card */
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  background-color: #fff;
+}
+
+.product-title {
+  font-family: serif;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.product-price {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.product-image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.product-image-wrapper {
+  margin-top: 10px;
+}
