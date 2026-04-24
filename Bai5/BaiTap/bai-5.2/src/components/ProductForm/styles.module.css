@@ -1,0 +1,40 @@
+.container {
+  max-width: 500px;
+  margin: auto;
+  padding: 20px;
+  background: #fdfdfd;
+  border: 1px solid #ddd;
+}
+.input,
+.area {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.err {
+  color: #e84118;
+  font-size: 12px;
+  margin: 5px 0;
+}
+.charCount {
+  text-align: right;
+  font-size: 11px;
+  color: #7f8c8d;
+}
+.low {
+  color: #f39c12;
+  font-weight: bold;
+}
+.submitBtn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 15px;
+  background: #e67e22;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
