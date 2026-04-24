@@ -1,0 +1,36 @@
+.wrapper {
+  max-width: 450px;
+  margin: 30px auto;
+  padding: 25px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+.group {
+  margin-bottom: 15px;
+}
+.group input,
+.group select,
+.group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.group small {
+  color: #d63031;
+  display: block;
+  margin-top: 5px;
+  font-weight: 500;
+}
+.btn {
+  width: 100%;
+  padding: 12px;
+  background: #0984e3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
