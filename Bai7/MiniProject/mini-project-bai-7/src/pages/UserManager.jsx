@@ -40,6 +40,10 @@ export default function UserManager() {
     formState: { isSubmitting, errors },
   } = useForm();
 
+  const showToast = (message, severity = "success") => {
+    setToast({ open: true, message, severity });
+  };
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -53,10 +57,6 @@ export default function UserManager() {
     };
     fetchUsers();
   }, []);
-
-  const showToast = (message, severity = "success") => {
-    setToast({ open: true, message, severity });
-  };
 
   const onAddUser = async (data) => {
     try {
