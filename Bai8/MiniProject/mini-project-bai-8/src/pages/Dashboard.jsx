@@ -1,58 +1,82 @@
-import { useState, useEffect, useMemo, useCallback, useContext } from "react";
-import { Container, Table, TableBody, TableHead, TableRow, TableCell, TextField, Typography, Box, Button, CircularProgress } from "@mui/material";
+import { useEffect, useMemo, useCallback, useContext, useReducer } from "react";
+import {
+  Container,
+  Table,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  TextField,
+  Typography,
+  Box,
+  Button,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
 import { AuthContext } from "../contexts/AuthContext";
-import { productService } from "../services/productService"; // Import service mới
+import { productService } from "../services/productService";
 import ProductRow from "../components/ProductRow";
+import { dashboardReducer, initialState } from "../store/productReducer"; // Import reducer
 
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
-  const [products, setProducts] = useState([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
 
-  // Gọi API thông qua Service lớp trung gian
+  // 1. Thay thế useState bằng useReducer
+  const [state, dispatch] = useReducer(dashboardReducer, initialState);
+  const { products, search, loading, error } = state;
+
+  // 2. Cập nhật useEffect gọi API
   useEffect(() => {
     const fetchProducts = async () => {
+      dispatch({ type: "FETCH_START" });
       try {
-        setLoading(true);
         const data = await productService.getProducts(20);
-        setProducts(data);
+        dispatch({ type: "FETCH_SUCCESS", payload: data });
       } catch (err) {
-        // Xử lý lỗi tại đây (ví dụ: show thông báo)
-      } finally {
-        setLoading(false);
+        dispatch({ type: "FETCH_ERROR", payload: "Không thể tải danh sách sản phẩm!" });
       }
     };
-
     fetchProducts();
   }, []);
 
-  // Tối ưu lọc danh sách với useMemo
+  // 3. Tối ưu lọc danh sách (Dùng state.search và state.products)
   const filteredProducts = useMemo(() => {
     return products.filter((p) => p.title.toLowerCase().includes(search.toLowerCase()));
   }, [search, products]);
 
-  // Tối ưu hàm xóa với useCallback để tránh re-render ProductRow
+  // 4. Hàm xóa với dispatch
   const handleDelete = useCallback((id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    dispatch({ type: "DELETE_PRODUCT", payload: id });
   }, []);
 
   return (
     <Container sx={{ py: 4 }}>
-      {/* Header section */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: "bold" }}>
           Xin chào, {user?.name}
         </Typography>
-        <Button variant="contained" onClick={logout} color="inherit">
+        <Button variant="contained" onClick={logout} color="error">
           Đăng xuất
         </Button>
       </Box>
 
-      {/* Search section */}
-      <TextField fullWidth label="Tìm kiếm sản phẩm nhanh..." variant="outlined" onChange={(e) => setSearch(e.target.value)} sx={{ mb: 4 }} />
+      {/* Dispatch action khi nhập liệu search */}
+      <TextField
+        fullWidth
+        label="Tìm kiếm sản phẩm nhanh..."
+        variant="outlined"
+        value={search}
+        onChange={(e) => dispatch({ type: "SET_SEARCH", payload: e.target.value })}
+        sx={{ mb: 4 }}
+      />
 
-      {/* Main Content */}
+      {/* Hiển thị lỗi nếu có */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
           <CircularProgress />
