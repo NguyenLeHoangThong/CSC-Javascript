@@ -1,79 +1,95 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Link } from 'react-router-dom';
-import { 
-  ThemeProvider, createTheme, CssBaseline, Box, AppBar, Toolbar, 
-  Typography, IconButton, Drawer, List, ListItem, ListItemButton, 
-  ListItemIcon, ListItemText
-} from '@mui/material';
-import { Menu as MenuIcon, Dashboard, LocalShipping, Settings, Brightness4, Brightness7 } from '@mui/icons-material';
+import { Container, Typography, Rating, Button, Stack, Box, Chip, Divider, Paper, Grid } from '@mui/material';
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 
-export default function App() {
-  const [mode, setMode] = useState('light'); // useState đơn giản để đổi theme
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Tạo theme trực tiếp trong function
-  const myTheme = createTheme({
-    palette: { mode: mode },
-  });
-
-  const menuItems = [
-    { text: 'Tổng quan', icon: <Dashboard />, path: '/' },
-    { text: 'Đơn hàng', icon: <LocalShipping />, path: '/orders' },
-    { text: 'Cài đặt', icon: <Settings />, path: '/settings' },
-  ];
-
+export default function ProductDetail() {
   return (
-    <ThemeProvider theme={myTheme}>
-      <CssBaseline />
-      <BrowserRouter>
-        {/* AppBar: Thanh công cụ phía trên */}
-        <AppBar position="fixed" sx={{ zIndex: 1201 }}>
-          <Toolbar>
-            <IconButton color="inherit" onClick={() => setMobileOpen(true)} sx={{ mr: 2, display: { sm: 'none' } }}>
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" sx={{ flexGrow: 1 }}>SHIPPER ADMIN</Typography>
-            <IconButton onClick={() => setMode(mode === 'light' ? 'dark' : 'light')} color="inherit">
-              {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
-            </IconButton>
-          </Toolbar>
-        </AppBar>
+    <Container sx={{ py: { xs: 4, md: 8 } }}>
+      {/* MUI v6 dùng Grid container mà không cần prop 'item' ở các cột con.
+         Thay vào đó dùng prop 'size'.
+      */}
+      <Grid container spacing={{ xs: 4, md: 10 }} alignItems="center">
+        
+        {/* CỘT TRÁI: HÌNH ẢNH - size md=6 là chia đôi màn hình desktop */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              bgcolor: 'action.hover', 
+              borderRadius: 4, 
+              p: 2, 
+              display: 'flex', 
+              justifyContent: 'center' 
+            }}
+          >
+            <Box 
+              component="img" 
+              src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800" 
+              alt="Sony Headphone"
+              sx={{ 
+                width: '100%', 
+                maxWidth: 450, 
+                height: 'auto', 
+                borderRadius: 2,
+              }} 
+            />
+          </Paper>
+        </Grid>
 
-        {/* Drawer cho Mobile (Chạm vào hiện ra) */}
-        <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} sx={{ display: { xs: 'block', sm: 'none' } }}>
-          <Box sx={{ width: 240 }} onClick={() => setMobileOpen(false)}>
-            <List sx={{ mt: 8 }}>
-              {menuItems.map((item) => (
-                <ListItem key={item.text} disablePadding>
-                  <ListItemButton component={Link} to={item.path}>
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        </Drawer>
+        {/* CỘT PHẢI: THÔNG TIN - size md=6 */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Stack spacing={3}>
+            <Box>
+              <Chip label="Bán chạy" color="error" size="small" sx={{ mb: 1, fontWeight: 'bold' }} />
+              <Typography variant="h3" fontWeight={800} sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
+                Sony WH-1000XM5
+              </Typography>
+              
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <Rating value={4.5} precision={0.5} readOnly size="small" />
+                <Typography variant="body2" color="text.secondary">(1,250 đánh giá)</Typography>
+              </Stack>
+            </Box>
 
-        {/* Sidebar cho Desktop (Luôn hiện) */}
-        <Drawer variant="permanent" sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { width: 240 } }}>
-          <List sx={{ mt: 8 }}>
-            {menuItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton component={Link} to={item.path}>
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Drawer>
+            <Typography variant="h4" color="error" fontWeight="bold">
+              8.490.000đ
+            </Typography>
 
-        {/* Vùng nội dung chính */}
-        <Box component="main" sx={{ ml: { sm: '240px' }, p: 3, mt: 8 }}>
-           <Typography variant="h4">Nội dung quản trị</Typography>
-        </Box>
-      </BrowserRouter>
-    </ThemeProvider>
+            <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+              Công nghệ chống ồn hàng đầu thế giới. Thiết kế tinh tế, thời lượng pin 30 giờ, 
+              mang lại trải nghiệm âm thanh hoàn hảo cho cả ngày dài.
+            </Typography>
+
+            <Divider />
+
+            <Box>
+              <Typography fontWeight="bold" gutterBottom>Màu sắc:</Typography>
+              <Stack direction="row" spacing={2}>
+                <Chip label="Đen" variant="filled" onClick={() => {}} />
+                <Chip label="Bạc" variant="outlined" onClick={() => {}} />
+              </Stack>
+            </Box>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 2 }}>
+              <Button 
+                variant="contained" 
+                size="large" 
+                startIcon={<AddShoppingCartIcon />} 
+                sx={{ flexGrow: 1, py: 1.5, borderRadius: 2 }}
+              >
+                Thêm vào giỏ
+              </Button>
+              <Button 
+                variant="outlined" 
+                size="large" 
+                sx={{ flexGrow: 1, py: 1.5, borderRadius: 2 }}
+              >
+                Mua ngay
+              </Button>
+            </Stack>
+          </Stack>
+        </Grid>
+
+      </Grid>
+    </Container>
   );
 }

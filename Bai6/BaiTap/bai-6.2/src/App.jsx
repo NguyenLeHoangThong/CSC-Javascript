@@ -1,95 +1,135 @@
-import { Container, Typography, Rating, Button, Stack, Box, Chip, Divider, Paper, Grid } from '@mui/material';
-import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import { useForm, Controller } from "react-hook-form";
+import {
+  TextField,
+  Button,
+  Paper,
+  Typography,
+  Container,
+  Autocomplete,
+  Checkbox,
+  FormControlLabel,
+  FormHelperText,
+  Box,
+  CircularProgress,
+  Grid,
+} from "@mui/material";
+import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
 
-export default function ProductDetail() {
+// Danh sách kỹ năng mẫu
+const skillOptions = ["React", "Node.js", "Python", "UI/UX Design", "DevOps", "TypeScript"];
+
+// Định nghĩa quy tắc kiểm tra dữ liệu
+const talentSchema = yup
+  .object({
+    fullName: yup.string().required("Vui lòng nhập họ tên"),
+    skills: yup.array().min(1, "Chọn ít nhất 1 kỹ năng"),
+    startDate: yup.date().nullable().required("Vui lòng chọn ngày đi làm").typeError("Ngày không hợp lệ"),
+    agree: yup.boolean().oneOf([true], "Bạn phải đồng ý với điều khoản"),
+  })
+  .required();
+
+export default function TalentForm() {
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm({
+    resolver: yupResolver(talentSchema),
+    defaultValues: { fullName: "", skills: [], startDate: null, agree: false },
+  });
+
+  const onSubmit = async (data) => {
+    await new Promise((r) => setTimeout(r, 2000));
+    console.log("Dữ liệu ứng viên:", data);
+    alert("Hồ sơ đã được gửi đi thành công!");
+  };
+
   return (
-    <Container sx={{ py: { xs: 4, md: 8 } }}>
-      {/* MUI v6 dùng Grid container mà không cần prop 'item' ở các cột con.
-         Thay vào đó dùng prop 'size'.
-      */}
-      <Grid container spacing={{ xs: 4, md: 10 }} alignItems="center">
-        
-        {/* CỘT TRÁI: HÌNH ẢNH - size md=6 là chia đôi màn hình desktop */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              bgcolor: 'action.hover', 
-              borderRadius: 4, 
-              p: 2, 
-              display: 'flex', 
-              justifyContent: 'center' 
-            }}
-          >
-            <Box 
-              component="img" 
-              src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800" 
-              alt="Sony Headphone"
-              sx={{ 
-                width: '100%', 
-                maxWidth: 450, 
-                height: 'auto', 
-                borderRadius: 2,
-              }} 
-            />
-          </Paper>
-        </Grid>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Container maxWidth="md" sx={{ py: 10 }}>
+        <Paper sx={{ p: { xs: 3, md: 6 }, borderRadius: 4, boxShadow: 8 }}>
+          <Typography variant="h4" fontWeight={800} mb={4} textAlign="center">
+            HỒ SƠ ỨNG VIÊN
+          </Typography>
 
-        {/* CỘT PHẢI: THÔNG TIN - size md=6 */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Stack spacing={3}>
-            <Box>
-              <Chip label="Bán chạy" color="error" size="small" sx={{ mb: 1, fontWeight: 'bold' }} />
-              <Typography variant="h3" fontWeight={800} sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
-                Sony WH-1000XM5
-              </Typography>
-              
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-                <Rating value={4.5} precision={0.5} readOnly size="small" />
-                <Typography variant="body2" color="text.secondary">(1,250 đánh giá)</Typography>
-              </Stack>
-            </Box>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Grid container spacing={3}>
+              {/* Họ tên - Full width */}
+              <Grid size={{ xs: 12 }}>
+                <Controller
+                  name="fullName"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField {...field} label="Họ và tên" fullWidth error={!!error} helperText={error?.message} />
+                  )}
+                />
+              </Grid>
 
-            <Typography variant="h4" color="error" fontWeight="bold">
-              8.490.000đ
-            </Typography>
+              {/* Kỹ năng - Autocomplete (Khó) */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Controller
+                  name="skills"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <Autocomplete
+                      multiple
+                      options={skillOptions}
+                      {...field}
+                      onChange={(_, data) => field.onChange(data)} // Quan trọng: Cập nhật mảng vào RHF
+                      renderInput={(params) => <TextField {...params} label="Kỹ năng chuyên môn" error={!!error} helperText={error?.message} />}
+                    />
+                  )}
+                />
+              </Grid>
 
-            <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-              Công nghệ chống ồn hàng đầu thế giới. Thiết kế tinh tế, thời lượng pin 30 giờ, 
-              mang lại trải nghiệm âm thanh hoàn hảo cho cả ngày dài.
-            </Typography>
+              {/* Ngày đi làm - DatePicker (Khó) */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Controller
+                  name="startDate"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <DatePicker
+                      {...field}
+                      label="Ngày có thể bắt đầu"
+                      sx={{ width: "100%" }}
+                      slotProps={{
+                        textField: {
+                          error: !!error,
+                          helperText: error?.message,
+                        },
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
 
-            <Divider />
+              {/* Điều khoản - Checkbox */}
+              <Grid size={{ xs: 12 }}>
+                <Controller
+                  name="agree"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <Box>
+                      <FormControlLabel control={<Checkbox {...field} checked={field.value} />} label="Tôi cam kết các thông tin trên là chính xác" />
+                      {error && <FormHelperText error>{error.message}</FormHelperText>}
+                    </Box>
+                  )}
+                />
+              </Grid>
 
-            <Box>
-              <Typography fontWeight="bold" gutterBottom>Màu sắc:</Typography>
-              <Stack direction="row" spacing={2}>
-                <Chip label="Đen" variant="filled" onClick={() => {}} />
-                <Chip label="Bạc" variant="outlined" onClick={() => {}} />
-              </Stack>
-            </Box>
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 2 }}>
-              <Button 
-                variant="contained" 
-                size="large" 
-                startIcon={<AddShoppingCartIcon />} 
-                sx={{ flexGrow: 1, py: 1.5, borderRadius: 2 }}
-              >
-                Thêm vào giỏ
-              </Button>
-              <Button 
-                variant="outlined" 
-                size="large" 
-                sx={{ flexGrow: 1, py: 1.5, borderRadius: 2 }}
-              >
-                Mua ngay
-              </Button>
-            </Stack>
-          </Stack>
-        </Grid>
-
-      </Grid>
-    </Container>
+              {/* Nút gửi */}
+              <Grid size={{ xs: 12 }}>
+                <Button type="submit" variant="contained" size="large" fullWidth disabled={isSubmitting} sx={{ py: 2, fontWeight: "bold" }}>
+                  {isSubmitting ? <CircularProgress size={24} /> : "Nộp hồ sơ ứng tuyển"}
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+        </Paper>
+      </Container>
+    </LocalizationProvider>
   );
 }
