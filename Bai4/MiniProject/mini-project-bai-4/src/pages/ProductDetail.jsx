@@ -10,7 +10,7 @@ export default function ProductDetail() {
         Đang hiển thị sản phẩm có ID: <strong style={{ color: '#e67e22' }}>{id}</strong>
       </div>
       <p>Đây là trang được render động dựa trên ID từ thanh địa chỉ URL.</p>
-      <Link to="/" style={{ color: '#0984e3' }}>← Quay lại danh sách</Link>
+      <Link to="/" style={{ color: '#0984e3' }}>← Back danh sách</Link>
     </div>
   );
 }
