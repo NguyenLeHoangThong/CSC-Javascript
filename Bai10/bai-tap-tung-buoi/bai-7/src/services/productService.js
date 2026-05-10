@@ -82,10 +82,16 @@ export const getProductById = async (id) => {
 };
 
 export const getProductsByIds = async (items) => {
-  const requests = items.map((item) => axiosClient.get(`/products/${item.id}`));
-  const responses = await Promise.all(requests);
-  return responses.map((response, index) => ({
-    ...normalizeProduct(response.data),
-    quantity: items[index].quantity,
-  }));
+  const result = [];
+
+  for (const item of items) {
+    const response = await axiosClient.get(`/products/${item.id}`);
+
+    result.push({
+      ...normalizeProduct(response.data),
+      quantity: item.quantity,
+    });
+  }
+
+  return result;
 };

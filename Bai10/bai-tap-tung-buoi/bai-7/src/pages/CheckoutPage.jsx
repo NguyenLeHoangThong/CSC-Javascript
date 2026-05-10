@@ -20,7 +20,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import dayjs from "dayjs";
 
@@ -55,11 +55,6 @@ const CheckoutPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const provinceCode = useWatch({
-    control,
-    name: "provinceCode",
-  });
-
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
@@ -76,19 +71,20 @@ const CheckoutPage = () => {
     fetchProvinces();
   }, []);
 
-  const selectedProvince = useMemo(() => {
-    return provinces.find((item) => String(item.code) === String(provinceCode));
-  }, [provinceCode, provinces]);
+  const getProvinceName = (code) => {
+    return provinces.find((p) => String(p.code) === String(code))?.name || "";
+  };
 
   const onSubmit = async (formData) => {
-    console.log("hieheie")
     try {
       setSubmitting(true);
       setSubmitError("");
 
+      const shippingProvince = getProvinceName(formData.provinceCode);
+
       await createOrder({
         ...formData,
-        shippingProvince: selectedProvince?.name || "",
+        shippingProvince,
       });
 
       setSuccess(true);
@@ -107,24 +103,8 @@ const CheckoutPage = () => {
           <BackButton />
         </Box>
 
-        <Paper
-          variant="outlined"
-          sx={{
-            p: { xs: 3, md: 5 },
-            borderRadius: 6,
-          }}
-        >
-          <Typography
-            variant="h3"
-            sx={{
-              mb: 4,
-              fontWeight: 600,
-              fontSize: {
-                xs: "2rem",
-                md: "3rem",
-              },
-            }}
-          >
+        <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 6 }}>
+          <Typography variant="h3" sx={{ mb: 4, fontWeight: 600 }}>
             Checkout
           </Typography>
 
@@ -176,15 +156,7 @@ const CheckoutPage = () => {
 
               {/* Address */}
               <Grid size={12}>
-                <TextField
-                  fullWidth
-                  label="Address"
-                  multiline
-                  rows={4}
-                  {...register("address")}
-                  error={!!errors.address}
-                  helperText={errors.address?.message}
-                />
+                <TextField fullWidth label="Address" multiline rows={4} {...register("address")} />
               </Grid>
 
               {/* Delivery Date */}
@@ -211,7 +183,7 @@ const CheckoutPage = () => {
 
               {/* Note */}
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField fullWidth label="Order note" {...register("note")} error={!!errors.note} helperText={errors.note?.message} />
+                <TextField fullWidth label="Order note" {...register("note")} />
               </Grid>
             </Grid>
 
@@ -221,20 +193,7 @@ const CheckoutPage = () => {
               </Alert>
             )}
 
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              disabled={submitting}
-              sx={{
-                mt: 5,
-                py: 1.8,
-                borderRadius: 3,
-                fontSize: "1rem",
-                fontWeight: 700,
-                textTransform: "none",
-              }}
-            >
+            <Button type="submit" variant="contained" fullWidth disabled={submitting} sx={{ mt: 5, py: 1.8, borderRadius: 3, fontWeight: 700 }}>
               {submitting ? "Placing order..." : "Place Order"}
             </Button>
           </Box>

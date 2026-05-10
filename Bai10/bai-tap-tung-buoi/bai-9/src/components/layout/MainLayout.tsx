@@ -1,41 +1,38 @@
-import { AppBar, Box, Container, Toolbar, Typography } from "@mui/material";
-import { Link, Outlet } from "react-router-dom";
+import { Box } from "@mui/material";
+import { useState } from "react";
+import { Outlet } from "react-router-dom"; // Import Outlet
 
-const MainLayout = () => (
-  <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-    <AppBar position="sticky">
-      <Container maxWidth="xl">
-        <Toolbar sx={{ gap: 3 }}>
-          <Typography
-            component={Link}
-            to="/"
-            variant="h6"
-            fontWeight={800}
-            sx={{ color: "inherit", textDecoration: "none", flexGrow: 1 }}
-          >
-            CSC Shop – TypeScript
-          </Typography>
-          <Typography
-            component={Link}
-            to="/form-demo"
-            sx={{ color: "inherit", textDecoration: "none", fontSize: 14 }}
-          >
-            Form Demo
-          </Typography>
-        </Toolbar>
-      </Container>
-    </AppBar>
+import Header from "./Header";
+import Footer from "./Footer";
 
-    <Box sx={{ flex: 1 }}>
-      <Outlet />
+const MainLayout = () => {
+  const [search, setSearch] = useState("");
+
+  return (
+    <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+      <Box
+        aria-hidden
+        sx={{
+          position: "fixed",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 0,
+          opacity: 0.45,
+          background:
+            "radial-gradient(circle at 12% 18%, rgba(255, 122, 162, 0.22) 0, rgba(255,122,162,0) 18%), radial-gradient(circle at 84% 14%, rgba(94, 53, 177, 0.18) 0, rgba(94,53,177,0) 20%), radial-gradient(circle at 78% 82%, rgba(11, 116, 229, 0.16) 0, rgba(11,116,229,0) 16%), radial-gradient(circle at 15% 88%, rgba(89, 219, 170, 0.18) 0, rgba(89,219,170,0) 16%)",
+        }}
+      />
+      <Header search={search} setSearch={setSearch} />
+
+      <Box sx={{ flex: 1, position: "relative", zIndex: 1 }}>
+        <Outlet context={{ search }} />
+      </Box>
+
+      <Box sx={{ position: "relative", zIndex: 1 }}>
+        <Footer />
+      </Box>
     </Box>
-
-    <Box sx={{ background: "linear-gradient(90deg, #0B74E5, #4f46e5)", color: "white", py: 2 }}>
-      <Container>
-        <Typography textAlign="center" fontSize={14}>© 2025 CSC Shop – TypeScript Edition</Typography>
-      </Container>
-    </Box>
-  </Box>
-);
+  );
+};
 
 export default MainLayout;

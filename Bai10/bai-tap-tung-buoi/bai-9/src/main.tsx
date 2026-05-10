@@ -1,28 +1,38 @@
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import router from "./router/index.tsx";
-import { CartProvider } from "./context/CartContext";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
-const theme = createTheme({
-  palette: {
-    primary: { main: "#0B74E5" },
-    secondary: { main: "#FF424E" },
-  },
-  typography: { fontFamily: "Inter, sans-serif" },
-  shape: { borderRadius: 12 },
-  components: {
-    MuiButton: {
-      styleOverrides: { root: { textTransform: "none", fontWeight: 700 } },
-    },
-  },
-});
+import router from "./router";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <ThemeProvider theme={theme}>
-    <CssBaseline />
-    <CartProvider>
-      <RouterProvider router={router} />
-    </CartProvider>
-  </ThemeProvider>
+import { CartProvider } from "./context/CartProvider";
+import { ThemeContextProvider, useThemeContext } from "./theme/theme";
+
+const Providers = () => {
+  const { theme } = useThemeContext();
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+
+      <CartProvider>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RouterProvider router={router} />
+        </LocalizationProvider>
+      </CartProvider>
+    </ThemeProvider>
+  );
+};
+
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  throw new Error("Root element not found");
+}
+
+ReactDOM.createRoot(rootElement).render(
+  <ThemeContextProvider>
+    <Providers />
+  </ThemeContextProvider>
 );

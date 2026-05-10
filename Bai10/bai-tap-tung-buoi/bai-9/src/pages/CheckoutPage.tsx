@@ -14,12 +14,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import dayjs from "dayjs";
 
 import BackButton from "../components/common/BackButton";
 import EmptyState from "../components/common/EmptyState";
@@ -27,6 +26,10 @@ import { createOrder } from "../services/orderService";
 import { getProvinces } from "../services/locationService";
 import { useCart } from "../context/CartProvider";
 import { checkoutSchema } from "../schemas/checkoutSchema";
+import dayjs from "dayjs";
+import type { Province } from "../types/checkout";
+import { CheckoutFormData } from "../schemas/checkoutSchema";
+import { CreateOrderPayload } from "../types/order";
 
 const CheckoutPage = () => {
   const {
@@ -35,7 +38,8 @@ const CheckoutPage = () => {
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm({
+    watch,
+  } = useForm<CheckoutFormData>({
     resolver: yupResolver(checkoutSchema),
     defaultValues: {
       name: "",
@@ -50,12 +54,14 @@ const CheckoutPage = () => {
 
   const { cartItems, totalPrice, dispatch } = useCart();
 
-  const [provinces, setProvinces] = useState([]);
+  const [provinces, setProvinces] = useState<Province[]>([]);
   const [loadingProvince, setLoadingProvince] = useState(false);
 
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  const provinceCode = watch("provinceCode");
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -73,12 +79,14 @@ const CheckoutPage = () => {
     fetchProvinces();
   }, []);
 
-  const getProvinceName = (code) => {
-    return provinces.find((p) => String(p.code) === String(code))?.name || "";
-  };
+  const selectedProvince = useMemo(() => {
+    if (!provinceCode) return undefined;
 
-  const onSubmit = async (formData) => {
-    if (!cartItems.length) {
+    return provinces.find((item) => String(item.code) === String(provinceCode));
+  }, [provinceCode, provinces]);
+
+  const onSubmit = async (formData: CheckoutFormData) => {
+    if (cartItems.length === 0) {
       setSubmitError("Your cart is empty.");
       return;
     }
@@ -87,22 +95,16 @@ const CheckoutPage = () => {
       setSubmitting(true);
       setSubmitError("");
 
-      const shippingProvince = getProvinceName(formData.provinceCode);
+      const payload: CreateOrderPayload = {
+        products: cartItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        formData,
+      };
 
-      await createOrder(
-        cartItems.map((item) => ({
-          ...item,
-          shippingProvince,
-          deliveryDate: formData.deliveryDate,
-          customerInfo: {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-            note: formData.note,
-          },
-        }))
-      );
+      await createOrder(payload);
 
       setSuccess(true);
       dispatch({ type: "CLEAR_CART" });
@@ -114,7 +116,7 @@ const CheckoutPage = () => {
     }
   };
 
-  if (!cartItems.length) {
+  if (cartItems.length === 0) {
     return <EmptyState message="No items in cart. Add products before checkout." showBackHome />;
   }
 
@@ -125,10 +127,10 @@ const CheckoutPage = () => {
       </Box>
 
       <Grid container spacing={3}>
-        {/* FORM */}
+        {/* LEFT - FORM */}
         <Grid size={{ xs: 12, md: 7 }}>
-          <Paper sx={{ p: 3, borderRadius: 3 }} variant="outlined">
-            <Typography variant="h4" fontWeight={700} mb={3}>
+          <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }} variant="outlined">
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
               Checkout
             </Typography>
 
@@ -146,6 +148,7 @@ const CheckoutPage = () => {
                   <TextField fullWidth label="Phone" {...register("phone")} error={!!errors.phone} helperText={errors.phone?.message} />
                 </Grid>
 
+                {/* PROVINCE */}
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
                     control={control}
@@ -153,8 +156,7 @@ const CheckoutPage = () => {
                     render={({ field }) => (
                       <FormControl fullWidth error={!!errors.provinceCode}>
                         <InputLabel>Province / City</InputLabel>
-
-                        <Select {...field} label="Province / City">
+                        <Select label="Province / City" {...field}>
                           {loadingProvince && <MenuItem value="">Loading...</MenuItem>}
 
                           {provinces.map((item) => (
@@ -165,7 +167,7 @@ const CheckoutPage = () => {
                         </Select>
 
                         <Typography variant="caption" color="error">
-                          {errors.provinceCode?.message}
+                          {errors.provinceCode?.message || ""}
                         </Typography>
                       </FormControl>
                     )}
@@ -173,9 +175,18 @@ const CheckoutPage = () => {
                 </Grid>
 
                 <Grid size={{ xs: 12 }}>
-                  <TextField fullWidth label="Address" multiline rows={3} {...register("address")} />
+                  <TextField
+                    fullWidth
+                    label="Address"
+                    multiline
+                    rows={3}
+                    {...register("address")}
+                    error={!!errors.address}
+                    helperText={errors.address?.message}
+                  />
                 </Grid>
 
+                {/* DATE PICKER */}
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Controller
                     name="deliveryDate"
@@ -198,7 +209,7 @@ const CheckoutPage = () => {
                 </Grid>
 
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField fullWidth label="Order note" {...register("note")} />
+                  <TextField fullWidth label="Order note" {...register("note")} error={!!errors.note} helperText={errors.note?.message} />
                 </Grid>
               </Grid>
 
@@ -215,10 +226,10 @@ const CheckoutPage = () => {
           </Paper>
         </Grid>
 
-        {/* SUMMARY */}
+        {/* RIGHT - SUMMARY */}
         <Grid size={{ xs: 12, md: 5 }}>
-          <Paper sx={{ p: 3, borderRadius: 3 }} variant="outlined">
-            <Typography fontWeight={700} mb={2}>
+          <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }} variant="outlined">
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
               Review your items
             </Typography>
 
@@ -237,20 +248,31 @@ const CheckoutPage = () => {
                   <Typography variant="body2">
                     {item.title} x{item.quantity}
                   </Typography>
-                  <Typography fontWeight={700}>${(item.price * item.quantity).toFixed(2)}</Typography>
+
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    ${(item.price * item.quantity).toFixed(2)}
+                  </Typography>
                 </Box>
               ))}
             </Stack>
 
-            <Typography variant="h6" mt={2.5}>
+            <Typography variant="h6" sx={{ mt: 2 }}>
               Total: ${Number(totalPrice).toFixed(2)}
             </Typography>
+
+            {selectedProvince && (
+              <Typography color="text.secondary" sx={{ mt: 1 }}>
+                Shipping to: {selectedProvince.name}
+              </Typography>
+            )}
           </Paper>
         </Grid>
       </Grid>
 
       <Snackbar open={success} autoHideDuration={3000} onClose={() => setSuccess(false)}>
-        <Alert severity="success">Order placed successfully!</Alert>
+        <Alert severity="success" onClose={() => setSuccess(false)}>
+          Order placed successfully!
+        </Alert>
       </Snackbar>
     </Container>
   );

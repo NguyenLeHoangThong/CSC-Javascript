@@ -1,22 +1,41 @@
-import type { CartState, CartAction } from "../types/cart";
+import { CartAction, CartState } from "../types/cart";
 
 export const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
+    case "HYDRATE_STATE":
+      return {
+        cartItems: action.payload.cartItems ?? [],
+        wishlistItems: action.payload.wishlistItems ?? [],
+      };
+
     case "ADD_TO_CART": {
-      const existing = state.cartItems.find((item) => item.id === action.payload.id);
-      if (existing) {
+      if (!action.payload?.id) return state;
+
+      const existingItem = state.cartItems.find((item) => item.id === action.payload.id);
+
+      if (existingItem) {
         return {
           ...state,
           cartItems: state.cartItems.map((item) =>
             item.id === action.payload.id
-              ? { ...item, quantity: item.quantity + 1 }
+              ? {
+                  ...item,
+                  quantity: item.quantity + 1,
+                }
               : item
           ),
         };
       }
+
       return {
         ...state,
-        cartItems: [...state.cartItems, { ...action.payload, quantity: 1 }],
+        cartItems: [
+          ...state.cartItems,
+          {
+            ...action.payload,
+            quantity: 1,
+          },
+        ],
       };
     }
 
@@ -29,9 +48,7 @@ export const cartReducer = (state: CartState, action: CartAction): CartState => 
     case "INCREASE_QUANTITY":
       return {
         ...state,
-        cartItems: state.cartItems.map((item) =>
-          item.id === action.payload ? { ...item, quantity: item.quantity + 1 } : item
-        ),
+        cartItems: state.cartItems.map((item) => (item.id === action.payload ? { ...item, quantity: item.quantity + 1 } : item)),
       };
 
     case "DECREASE_QUANTITY":
@@ -39,22 +56,26 @@ export const cartReducer = (state: CartState, action: CartAction): CartState => 
         ...state,
         cartItems: state.cartItems.map((item) =>
           item.id === action.payload
-            ? { ...item, quantity: item.quantity > 1 ? item.quantity - 1 : 1 }
+            ? {
+                ...item,
+                quantity: Math.max(1, item.quantity - 1),
+              }
             : item
         ),
       };
 
     case "CLEAR_CART":
-      return { ...state, cartItems: [] };
-
-    case "TOGGLE_WISHLIST": {
-      const id = action.payload;
-      const has = state.wishlistItems.includes(id);
       return {
         ...state,
-        wishlistItems: has
-          ? state.wishlistItems.filter((wid) => wid !== id)
-          : [...state.wishlistItems, id],
+        cartItems: [],
+      };
+
+    case "TOGGLE_WISHLIST": {
+      const exists = state.wishlistItems.includes(action.payload);
+
+      return {
+        ...state,
+        wishlistItems: exists ? state.wishlistItems.filter((id) => id !== action.payload) : [...state.wishlistItems, action.payload],
       };
     }
 

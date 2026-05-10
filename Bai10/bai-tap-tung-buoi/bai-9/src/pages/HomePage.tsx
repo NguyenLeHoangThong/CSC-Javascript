@@ -1,4 +1,4 @@
-import { Alert, Box, Container, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Skeleton, Stack, Typography } from "@mui/material";
+import { Box, Container, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Skeleton, Stack, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
@@ -7,7 +7,10 @@ import Loading from "../components/common/Loading";
 import ProductGrid from "../components/product/ProductGrid";
 import { useCart } from "../context/CartProvider";
 
-import { getCategories, getProducts } from "../services/productService";
+import { getProducts } from "../services/productService";
+import { getCategories } from "../services/categoryService";
+import { Category, priceMap, PriceRange, Product, sortMap, SortOption } from "../types";
+import { ProductResponse } from "../types/api";
 
 const ProductGridSkeleton = () => {
   return (
@@ -27,16 +30,20 @@ const ProductGridSkeleton = () => {
   );
 };
 
+type OutletContext = {
+  search: string;
+};
+
 const HomePage = () => {
-  const { search = "" } = useOutletContext() ?? {};
+  const { search = "" } = useOutletContext<OutletContext>();
   const { wishlistItems } = useCart();
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [category, setCategory] = useState("all");
-  const [priceRange, setPriceRange] = useState("all");
-  const [sort, setSort] = useState("default");
+  const [priceRange, setPriceRange] = useState<PriceRange>("all");
+  const [sort, setSort] = useState<SortOption>("default");
   const [collectionType, setCollectionType] = useState("all");
 
   useEffect(() => {
@@ -58,20 +65,7 @@ const HomePage = () => {
         setLoading(true);
         setError("");
 
-        const sortMap = {
-          priceAsc: { sortBy: "price", order: "asc" },
-          priceDesc: { sortBy: "price", order: "desc" },
-          ratingDesc: { sortBy: "rating", order: "desc" },
-        };
-
-        const priceMap = {
-          under50: { minPrice: "", maxPrice: 50 },
-          from50to200: { minPrice: 50, maxPrice: 200 },
-          from200to500: { minPrice: 200, maxPrice: 500 },
-          from500: { minPrice: 500, maxPrice: "" },
-        };
-
-        const data = await getProducts({
+        const data: ProductResponse = await getProducts({
           search,
           category,
           ...(priceMap[priceRange] ?? {}),
@@ -87,7 +81,7 @@ const HomePage = () => {
     };
 
     fetchProducts();
-  }, [category, search, priceRange, sort]);
+  }, [category, search  , priceRange, sort]);
 
   const visibleProducts = useMemo(() => {
     if (collectionType === "wishlist") {
@@ -136,7 +130,7 @@ const HomePage = () => {
           },
         }}
       >
-        <Typography variant="h4" fontWeight={800} sx={{ position: "relative", zIndex: 1 }}>
+        <Typography variant="h4" sx={{ position: "relative", zIndex: 1, fontWeight: 700 }}>
           CSC Shop
         </Typography>
         <Typography sx={{ opacity: 0.95, mt: 1, position: "relative", zIndex: 1 }}>
@@ -145,8 +139,14 @@ const HomePage = () => {
       </Box>
 
       <Box sx={{ mb: 3 }}>
-        <Grid container spacing={2.5} alignItems="center">
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid
+          container
+          spacing={{ xs: 2, md: 3 }}
+          sx={{
+            alignItems: "center",
+          }}
+        >
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <FormControl fullWidth>
               <InputLabel>Collection</InputLabel>
               <Select value={collectionType} label="Collection" onChange={(event) => setCollectionType(event.target.value)}>
