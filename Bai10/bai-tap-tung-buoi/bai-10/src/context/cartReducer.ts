@@ -1,12 +1,16 @@
-export const cartReducer = (state, action) => {
+import { CartAction, CartState } from "../types/cart";
+
+export const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case "HYDRATE_STATE":
       return {
-        ...state,
-        ...action.payload,
+        cartItems: action.payload.cartItems ?? [],
+        wishlistItems: action.payload.wishlistItems ?? [],
       };
 
     case "ADD_TO_CART": {
+      if (!action.payload?.id) return state;
+
       const existingItem = state.cartItems.find((item) => item.id === action.payload.id);
 
       if (existingItem) {
@@ -44,14 +48,7 @@ export const cartReducer = (state, action) => {
     case "INCREASE_QUANTITY":
       return {
         ...state,
-        cartItems: state.cartItems.map((item) =>
-          item.id === action.payload
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-              }
-            : item
-        ),
+        cartItems: state.cartItems.map((item) => (item.id === action.payload ? { ...item, quantity: item.quantity + 1 } : item)),
       };
 
     case "DECREASE_QUANTITY":
@@ -61,7 +58,7 @@ export const cartReducer = (state, action) => {
           item.id === action.payload
             ? {
                 ...item,
-                quantity: item.quantity > 1 ? item.quantity - 1 : 1,
+                quantity: Math.max(1, item.quantity - 1),
               }
             : item
         ),
@@ -74,11 +71,11 @@ export const cartReducer = (state, action) => {
       };
 
     case "TOGGLE_WISHLIST": {
-      const productId = action.payload;
-      const hasItem = state.wishlistItems.includes(productId);
+      const exists = state.wishlistItems.includes(action.payload);
+
       return {
         ...state,
-        wishlistItems: hasItem ? state.wishlistItems.filter((id) => id !== productId) : [...state.wishlistItems, productId],
+        wishlistItems: exists ? state.wishlistItems.filter((id) => id !== action.payload) : [...state.wishlistItems, action.payload],
       };
     }
 

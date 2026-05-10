@@ -10,6 +10,7 @@ export const checkoutSchema = yup.object({
     .required("Phone is required"),
   address: yup.string().trim().min(8, "Address must be at least 8 characters").required("Address is required"),
   provinceCode: yup.string().required("Please select a province"),
+  wardCode: yup.string().required("Please select a ward"),
   deliveryDate: yup
     .string()
     .required("Delivery date is required")
@@ -21,5 +22,7 @@ export const checkoutSchema = yup.object({
       tomorrow.setHours(0, 0, 0, 0);
       return selected >= tomorrow;
     }),
-  note: yup.string().max(300, "Note must be at most 300 characters").optional(),
+  note: yup.string().max(300, "Note must be at most 300 characters").optional().default(""),
 });
+
+export type CheckoutFormData = yup.InferType<typeof checkoutSchema>;

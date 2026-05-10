@@ -1,13 +1,21 @@
-import { Alert, Box, Container, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Skeleton, Stack, Typography } from "@mui/material";
+import { Box, Container, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Skeleton, Stack, Typography } from "@mui/material";
+
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import EmptyState from "../components/common/EmptyState";
 import Loading from "../components/common/Loading";
 import ProductGrid from "../components/product/ProductGrid";
-import { useCart } from "../context/CartProvider";
 
-import { getCategories, getProducts } from "../services/productService";
+import { useCart } from "../context/CartProvider";
+import { getProducts } from "../services/productService";
+import { getCategories } from "../services/categoryService";
+
+import { Category, priceMap, PriceRange, Product, sortMap, SortOption } from "../types";
+
+import { ProductResponse } from "../types/api";
+
+/* ================= Skeleton ================= */
 
 const ProductGridSkeleton = () => {
   return (
@@ -27,77 +35,81 @@ const ProductGridSkeleton = () => {
   );
 };
 
+type OutletContext = {
+  search: string;
+};
+
 const HomePage = () => {
-  const { search = "" } = useOutletContext() ?? {};
+  const { search = "" } = useOutletContext<OutletContext>();
   const { wishlistItems } = useCart();
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [category, setCategory] = useState("all");
-  const [priceRange, setPriceRange] = useState("all");
-  const [sort, setSort] = useState("default");
+  const [priceRange, setPriceRange] = useState<PriceRange>("all");
+  const [sort, setSort] = useState<SortOption>("default");
   const [collectionType, setCollectionType] = useState("all");
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await getCategories();
-        setCategories(data);
-      } catch {
-        setCategories([]);
-      }
-    };
+  /* ================= Search debounce ================= */
 
-    fetchCategories();
-  }, []);
-
-  const [debouncedSearch, setDebouncedSearch] = useState(search.trim());
+  const [searchInput, setSearchInput] = useState(search);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedSearch(search.trim());
-    }, 400);
-
-    return () => clearTimeout(timeoutId);
+    setSearchInput(search || "");
   }, [search]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  /* ================= Fetch with AbortController ================= */
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const sortMap = {
-          priceAsc: { sortBy: "price", order: "asc" },
-          priceDesc: { sortBy: "price", order: "desc" },
-          ratingDesc: { sortBy: "rating", order: "desc" },
-        };
+        const [categoriesRes, productsRes] = await Promise.all([
+          getCategories({ signal: controller.signal }),
+          getProducts({
+            search: debouncedSearch,
+            category,
+            ...(priceMap[priceRange] ?? {}),
+            ...(sortMap[sort] ?? {}),
+            signal: controller.signal,
+          }),
+        ]);
 
-        const priceMap = {
-          under50: { minPrice: "", maxPrice: 50 },
-          from50to200: { minPrice: 50, maxPrice: 200 },
-          from200to500: { minPrice: 200, maxPrice: 500 },
-          from500: { minPrice: 500, maxPrice: "" },
-        };
-
-        const data = await getProducts({
-          search: debouncedSearch,
-          category,
-          ...(priceMap[priceRange] ?? {}),
-          ...(sortMap[sort] ?? {}),
-        });
-
-        setProducts(data.products);
-      } catch {
+        setCategories(categoriesRes);
+        setProducts((productsRes as ProductResponse).products);
+      } catch (err: any) {
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") {
+          return;
+        }
         setError("Cannot load products right now. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProducts();
-  }, [category, debouncedSearch, priceRange, sort]);
+    fetchData();
+
+    return () => controller.abort();
+  }, [debouncedSearch, category, priceRange, sort]);
+
+  /* ================= Wishlist filter ================= */
 
   const visibleProducts = useMemo(() => {
     if (collectionType === "wishlist") {
@@ -106,9 +118,13 @@ const HomePage = () => {
     return products;
   }, [collectionType, products, wishlistItems]);
 
+  /* ================= Error ================= */
+
   if (error) {
     return <EmptyState message={error} />;
   }
+
+  /* ================= UI (UNCHANGED) ================= */
 
   return (
     <Container maxWidth="xl" sx={{ py: { xs: 2, md: 3 } }}>
@@ -146,39 +162,37 @@ const HomePage = () => {
           },
         }}
       >
-        <Typography variant="h4" fontWeight={800} sx={{ position: "relative", zIndex: 1 }}>
-          CSC Shop 
+        <Typography variant="h4" sx={{ position: "relative", zIndex: 1, fontWeight: 700 }}>
+          CSC Shop
         </Typography>
         <Typography sx={{ opacity: 0.95, mt: 1, position: "relative", zIndex: 1 }}>
           Fast shipping, curated products, and a floral-themed modern shopping experience.
         </Typography>
       </Box>
 
+      {/* Filters */}
       <Box sx={{ mb: 3 }}>
-        <Grid container spacing={2.5} alignItems="center">
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid container spacing={{ xs: 2, md: 3 }} sx={{ alignItems: "center" }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <FormControl fullWidth>
               <InputLabel>Collection</InputLabel>
-              <Select value={collectionType} label="Collection" onChange={(event) => setCollectionType(event.target.value)}>
+              <Select value={collectionType} label="Collection" onChange={(e) => setCollectionType(e.target.value)}>
                 <MenuItem value="all">All products</MenuItem>
                 <MenuItem value="wishlist">Wishlist only</MenuItem>
               </Select>
             </FormControl>
           </Grid>
+
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth>
               <InputLabel>Category</InputLabel>
-              <Select value={category} label="Category" onChange={(event) => setCategory(event.target.value)}>
+              <Select value={category} label="Category" onChange={(e) => setCategory(e.target.value)}>
                 <MenuItem value="all">All categories</MenuItem>
-                {categories.map((item) => {
-                  const categoryValue = item.slug;
-                  const categoryLabel = item.name;
-                  return (
-                    <MenuItem key={categoryValue} value={categoryValue}>
-                      {categoryLabel}
-                    </MenuItem>
-                  );
-                })}
+                {categories.map((item) => (
+                  <MenuItem key={item.slug} value={item.slug}>
+                    {item.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
@@ -186,7 +200,7 @@ const HomePage = () => {
           <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
             <FormControl fullWidth>
               <InputLabel>Price range</InputLabel>
-              <Select value={priceRange} label="Price range" onChange={(event) => setPriceRange(event.target.value)}>
+              <Select value={priceRange} label="Price range" onChange={(e) => setPriceRange(e.target.value)}>
                 <MenuItem value="all">All prices</MenuItem>
                 <MenuItem value="under50">Under $50</MenuItem>
                 <MenuItem value="from50to200">$50 - $200</MenuItem>
@@ -199,7 +213,7 @@ const HomePage = () => {
           <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
             <FormControl fullWidth>
               <InputLabel>Sort by</InputLabel>
-              <Select value={sort} label="Sort by" onChange={(event) => setSort(event.target.value)}>
+              <Select value={sort} label="Sort by" onChange={(e) => setSort(e.target.value)}>
                 <MenuItem value="default">Relevance</MenuItem>
                 <MenuItem value="priceAsc">Price low to high</MenuItem>
                 <MenuItem value="priceDesc">Price high to low</MenuItem>
@@ -210,10 +224,12 @@ const HomePage = () => {
         </Grid>
       </Box>
 
+      {/* Wishlist empty */}
       {collectionType === "wishlist" && wishlistItems.length === 0 ? (
         <EmptyState message="Your wishlist is empty. Tap heart icon on products to save favorites." />
       ) : null}
 
+      {/* Products */}
       <Stack spacing={2}>
         {loading ? (
           <>

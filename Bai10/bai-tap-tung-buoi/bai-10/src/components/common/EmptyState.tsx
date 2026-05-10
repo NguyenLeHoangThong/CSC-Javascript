@@ -2,7 +2,7 @@ import SearchOffIcon from "@mui/icons-material/SearchOff";
 import { Box, Button, Paper, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
-const EmptyState = ({ message, showBackHome = false }) => {
+const EmptyState = ({ message = "", showBackHome = false }) => {
   const navigate = useNavigate();
 
   return (

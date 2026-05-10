@@ -2,7 +2,7 @@ import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 
 import { Link } from "react-router-dom";
 
-const CartSummary = ({ totalPrice }) => {
+const CartSummary = ({ totalPrice }: { totalPrice: number }) => {
   return (
     <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider", position: { md: "sticky" }, top: { md: 90 } }}>
       <CardContent>
@@ -13,7 +13,7 @@ const CartSummary = ({ totalPrice }) => {
         <Box display="flex" justifyContent="space-between" mt={3}>
           <Typography>Total</Typography>
 
-          <Typography fontWeight={700}>${Number(totalPrice).toFixed(2)}</Typography>
+          <Typography fontWeight={700}>${totalPrice.toFixed(2)}</Typography>
         </Box>
 
         <Button component={Link} to="/checkout" fullWidth variant="contained" sx={{ mt: 3 }}>

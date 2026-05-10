@@ -1,19 +1,21 @@
-import { Box, Button, Card, CardContent, CardMedia, IconButton, Rating, Snackbar, Typography, Alert } from "@mui/material";
-import { useState } from "react";
+import { Box, Button, Card, CardContent, CardMedia, IconButton, Rating, Snackbar, Typography, Alert, Stack } from "@mui/material";
 
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 
+import { useState } from "react";
 import { Link } from "react-router-dom";
-
 import { useCart } from "../../context/CartProvider";
+import { Product } from "../../types";
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product }: { product: Product }) => {
   const { dispatch, cartItems, isInWishlist, toggleWishlist } = useCart();
+
   const isWishlisted = isInWishlist(product.id);
-  const [toastOpen, setToastOpen] = useState(false);
   const itemInCart = cartItems.find((item) => item.id === product.id);
   const currentQuantity = itemInCart?.quantity ?? 0;
+
+  const [toastOpen, setToastOpen] = useState(false);
 
   const handleAddToCart = () => {
     dispatch({
@@ -31,43 +33,63 @@ const ProductCard = ({ product }) => {
           borderRadius: 3,
           border: "1px solid",
           borderColor: "divider",
-          transition: "0.2s ease",
+          transition: "0.2s",
           "&:hover": {
             transform: "translateY(-4px)",
             boxShadow: 4,
           },
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <Box component={Link} to={`/product/${product.id}`} sx={{ display: "block", textDecoration: "none" }}>
-          <CardMedia component="img" image={product.thumbnail} alt={product.title} sx={{ height: 210, objectFit: "contain", p: 2 }} />
+        {/* IMAGE */}
+        <Box component={Link} to={`/product/${product.id}`} sx={{ display: "block" }}>
+          <CardMedia component="img" image={product.thumbnail} sx={{ height: 200, objectFit: "contain", p: 2 }} />
         </Box>
-        <CardContent>
+
+        <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          {/* TITLE */}
           <Typography
             component={Link}
             to={`/product/${product.id}`}
-            fontWeight={600}
             sx={{
-              color: "text.primary",
               textDecoration: "none",
+              color: "text.primary",
+              fontWeight: 600,
               display: "-webkit-box",
-              overflow: "hidden",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
+              overflow: "hidden",
               minHeight: 48,
             }}
           >
             {product.title}
           </Typography>
 
-          <Rating value={product.rating} precision={0.5} readOnly size="small" sx={{ mt: 1 }} />
+          {/* ⭐ RATING (FIX: xuống dòng riêng) */}
+          <Stack direction="row" alignItems="center" spacing={1} mt={1}>
+            <Rating value={product.rating} precision={0.5} readOnly size="small" />
+            <Typography variant="caption" color="text.secondary">
+              ({product.ratingCount})
+            </Typography>
+          </Stack>
 
+          {/* PRICE */}
           <Typography variant="h6" color="secondary.main" fontWeight={800} mt={1}>
             ${Number(product.price).toLocaleString()}
           </Typography>
 
-          <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
+          {/* ACTIONS */}
+          <Box
+            sx={{
+              mt: "auto",
+              display: "flex",
+              alignItems: "center",
+              pt: 2,
+            }}
+          >
             <Button variant="contained" size="small" onClick={handleAddToCart}>
-              {currentQuantity > 0 ? `In Cart: ${currentQuantity}` : "Add To Cart"}
+              {currentQuantity > 0 ? `In Cart (${currentQuantity})` : "Add To Cart"}
             </Button>
 
             <IconButton color={isWishlisted ? "error" : "default"} onClick={() => toggleWishlist(product.id)}>
@@ -76,15 +98,10 @@ const ProductCard = ({ product }) => {
           </Box>
         </CardContent>
       </Card>
-      <Snackbar
-        open={toastOpen}
-        autoHideDuration={1400}
-        onClose={() => setToastOpen(false)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert severity="success" variant="filled" sx={{ width: "100%" }}>
-          Added to cart successfully!
-        </Alert>
+
+      {/* TOAST */}
+      <Snackbar open={toastOpen} autoHideDuration={1500} onClose={() => setToastOpen(false)}>
+        <Alert severity="success">Added to cart</Alert>
       </Snackbar>
     </>
   );

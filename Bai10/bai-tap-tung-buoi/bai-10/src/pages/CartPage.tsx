@@ -19,7 +19,13 @@ const CartPage = () => {
       <Box sx={{ mb: 2.5 }}>
         <BackButton />
       </Box>
-      <Typography variant="h4" fontWeight={700} mb={4}>
+      <Typography
+        variant="h4"
+        sx={{
+          fontWeight: 700,
+          marginBottom: { xs: 2.5, md: 4 },
+        }}
+      >
         Shopping Cart
       </Typography>
 

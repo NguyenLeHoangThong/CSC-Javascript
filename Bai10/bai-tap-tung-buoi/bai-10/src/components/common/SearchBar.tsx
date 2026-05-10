@@ -1,32 +1,34 @@
 import { InputAdornment, TextField } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
-const SearchBar = ({ value, onChange }) => {
+type Props = {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+};
+
+const SearchBar = ({ value, onChange }: Props) => {
   return (
     <TextField
       fullWidth
       size="small"
-      placeholder="Search products, brands..."
+      placeholder="Search products..."
       value={value}
       onChange={onChange}
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        },
+      }}
       sx={{
         backgroundColor: "background.paper",
         borderRadius: 2,
         "& .MuiOutlinedInput-root": {
           borderRadius: 2,
-          color: "text.primary",
-          "& input::placeholder": {
-            color: "text.secondary",
-            opacity: 0.9,
-          },
         },
-      }}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <SearchIcon color="action" />
-          </InputAdornment>
-        ),
       }}
     />
   );

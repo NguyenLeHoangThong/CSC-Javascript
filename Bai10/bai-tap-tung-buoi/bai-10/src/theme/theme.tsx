@@ -1,16 +1,39 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createTheme, responsiveFontSizes } from "@mui/material/styles";
+import { createContext, useContext, useMemo, useState, useEffect } from "react";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import type { PaletteMode, Theme } from "@mui/material/styles";
 
-const ThemeContext = createContext();
+type ThemeContextType = {
+  mode: "light" | "dark";
+  toggleTheme: () => void;
+  theme: Theme;
+};
 
-export const ThemeContextProvider = ({ children }) => {
-  const [mode, setMode] = useState("light");
+const THEME_KEY = "csc-shop-theme";
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const ThemeContextProvider = ({ children }: { children: React.ReactNode }) => {
+  const [mode, setMode] = useState<PaletteMode>("light");
+
+  // ✅ HYDRATE FROM LOCALSTORAGE
+  useEffect(() => {
+    const saved = localStorage.getItem(THEME_KEY);
+
+    if (saved === "light" || saved === "dark") {
+      setMode(saved);
+    }
+  }, []);
 
   const toggleTheme = () => {
     setMode((prev) => (prev === "light" ? "dark" : "light"));
   };
+
+  // ✅ SAVE TO LOCALSTORAGE
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, mode);
+  }, [mode]);
 
   const theme = useMemo(() => {
     let customTheme = createTheme({
@@ -21,9 +44,6 @@ export const ThemeContextProvider = ({ children }) => {
         },
         secondary: {
           main: "#FF424E",
-        },
-        tertiary: {
-          main: "#5E35B1",
         },
         background: {
           default: mode === "light" ? "#f3f6ff" : "#0d1324",
@@ -73,4 +93,12 @@ export const ThemeContextProvider = ({ children }) => {
   );
 };
 
-export const useThemeContext = () => useContext(ThemeContext);
+export const useThemeContext = () => {
+  const context = useContext(ThemeContext);
+
+  if (!context) {
+    throw new Error("useThemeContext must be used inside ThemeContextProvider");
+  }
+
+  return context;
+};

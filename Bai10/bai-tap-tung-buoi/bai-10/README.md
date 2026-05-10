@@ -1,370 +1,415 @@
-# Bài 10: Hoàn Thiện Project – Polish, UX & Refactor
+# Bài 9: TypeScript – Migrate React App sang TypeScript
 
 ## Kiến thức trọng tâm
 
-- Tách component nhỏ: `Header`, `Footer`, `SearchBar`, `BackButton`, `Loading`, `ProductGrid`, `ProductInfo`, `CartSummary`
-- `useOutletContext`: truyền state từ layout xuống page qua React Router Outlet
-- Search debounce: `useEffect` + `setTimeout` / `clearTimeout`
-- `useMemo` filter phía client: `collectionType` lọc wishlist không cần re-fetch
-- Skeleton loading: `<Skeleton>` thay spinner khi load danh sách sản phẩm
-- `Snackbar` + `Alert`: toast notification khi thêm vào giỏ / đặt hàng thành công
-- `DatePicker` từ `@mui/x-date-pickers` + `dayjs` + `LocalizationProvider`
-- `useWatch`: theo dõi field trong react-hook-form mà không trigger re-render toàn form
-- `orderService`: gọi API tạo đơn hàng (`POST`, `PUT`, `DELETE`)
-- `Promise.all`: fetch nhiều sản phẩm song song
-- Persist nâng cao: lưu `id + quantity`, hydrate lại bằng `getProductsByIds` khi app khởi động
-- `responsiveFontSizes`: tự động scale font theo breakpoint
-- CSS-in-JS nâng cao: gradient, pseudo-element `::before` / `::after`, hover animation
+- TypeScript cơ bản: `type`, `interface`, union type, generic
+- Typed props: thay `PropTypes` bằng `interface` / `type`
+- Typed hooks: `useState<T>`, `useReducer<State, Action>`
+- Typed context: `createContext<T | undefined>(undefined)` + guard `useContext`
+- Generic component: component nhận type parameter `<T extends FieldValues>`
+- Discriminated union: mô hình hóa trạng thái API với `ApiState<T>`
+- Custom hook có type: `useApi<T>(url: string): ApiState<T>`
+- Cấu hình TypeScript: `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`
 
 ---
 
-## Những gì được optimize so với bài 8
+## Yêu cầu
 
-### 1. Persist cart — lưu `id + quantity` thay vì toàn bộ object
-
-**Bài 8:** Lưu toàn bộ `cartItems` array vào `localStorage` — dữ liệu sản phẩm (tên, giá, ảnh) bị stale nếu API thay đổi.
-
-**Bài 10:** Chỉ lưu `{ id, quantity }`. Khi app khởi động, `CartProvider` gọi `getProductsByIds` để fetch lại data mới nhất từ API, sau đó dispatch `HYDRATE_STATE`.
-
-```js
-// Lưu — chỉ lưu id và quantity
-localStorage.setItem(STORAGE_KEY, JSON.stringify({
-  cartItemIds: state.cartItems.map((item) => ({ id: item.id, quantity: item.quantity })),
-  wishlistItemIds: state.wishlistItems,
-}));
-
-// Khôi phục — fetch lại data từ API
-const cartItems = cartIds.length > 0 ? await getProductsByIds(cartIds) : [];
-dispatch({ type: "HYDRATE_STATE", payload: { cartItems, wishlistItems: wishlistIds } });
-```
-
-`getProductsByIds` dùng `Promise.all` để fetch song song, không tuần tự:
-
-```js
-// src/services/productService.js
-export const getProductsByIds = async (items) => {
-  const requests = items.map((item) => axiosClient.get(`/products/${item.id}`));
-  const responses = await Promise.all(requests);
-  return responses.map((response, index) => ({
-    ...normalizeProduct(response.data),
-    quantity: items[index].quantity,
-  }));
-};
-```
-
-> **Tại sao `Promise.all`:** Nếu dùng `for...of` + `await`, 5 sản phẩm = 5 lần chờ tuần tự. `Promise.all` chạy tất cả song song — tổng thời gian bằng request chậm nhất.
+- **Khởi tạo project TypeScript**: dùng Vite template `react-ts`.
+- **Định nghĩa types** trong `src/types/`:
+  - `Product`, `CartItem`, `CartState`, `CartAction` (discriminated union).
+  - `ApiState<T>` (discriminated union cho trạng thái fetch).
+- **Migrate `CartContext`**: thêm type cho `state`, `dispatch`, `createContext`.
+- **Migrate `productService`**: thêm return type `Promise<Product[]>`.
+- **Migrate `ProductCard`**: typed props `{ product: Product }`.
+- **Tạo `FormBuilder<T>`**: generic component nhận `fields`, `initialValues`, `onSubmit`.
+- **Tạo `useApi<T>`**: custom hook generic với `AbortController` + cache.
 
 ---
 
-### 2. `MainLayout` — search state + `useOutletContext`
+## Hướng dẫn
 
-**Bài 8:** `SearchBar` (nếu có) nằm trong `HomePage`, không liên kết với `Header`.
+### Bước 1: Khởi tạo project TypeScript
 
-**Bài 10:** `search` state sống ở `MainLayout`. `Header` nhận `search` + `setSearch` qua props để render `SearchBar`. `HomePage` nhận `search` qua `useOutletContext` — không cần prop drilling qua router.
-
-```jsx
-// MainLayout.jsx
-const [search, setSearch] = useState("");
-// ...
-<Header search={search} setSearch={setSearch} />
-<Outlet context={{ search }} />  {/* truyền xuống page */}
-
-// HomePage.jsx
-const { search = "" } = useOutletContext() ?? {};
+```bash
+npm create vite@latest bai-9 -- --template react-ts
+cd bai-9
+npm install
 ```
+
+Vite tạo sẵn `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` và các file `.tsx` / `.ts`.
+
+> **Giải thích:** Template `react-ts` cấu hình TypeScript strict mode, path alias, và JSX transform tự động — không cần cài thêm gì.
 
 ---
 
-### 3. Search debounce
+### Bước 2: Cấu hình `tsconfig.app.json`
 
-Mỗi ký tự gõ không trigger fetch ngay — chờ 400ms sau lần gõ cuối:
-
-```js
-const [debouncedSearch, setDebouncedSearch] = useState(search.trim());
-
-useEffect(() => {
-  const timeoutId = setTimeout(() => {
-    setDebouncedSearch(search.trim());
-  }, 400);
-  return () => clearTimeout(timeoutId); // hủy timeout cũ khi search thay đổi
-}, [search]);
-
-// Chỉ fetch khi debouncedSearch thay đổi
-useEffect(() => {
-  fetchProducts();
-}, [category, debouncedSearch, priceRange, sort]);
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
 ```
+
+> **Giải thích `strict: true`:** Bật tất cả strict checks — `strictNullChecks`, `noImplicitAny`, v.v. Đây là best practice, giúp bắt lỗi sớm nhất.
 
 ---
 
-### 4. Filter `collectionType` — `useMemo` phía client
+### Bước 3: Định nghĩa types
 
-Filter "Wishlist only" không gọi API — chỉ filter `products` đã có trong state:
+```ts
+// src/types/cart.ts
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  category: string;
+}
 
-```js
-const visibleProducts = useMemo(() => {
-  if (collectionType === "wishlist") {
-    return products.filter((item) => wishlistItems.includes(item.id));
+export interface CartItem extends Product {
+  quantity: number;
+}
+
+export interface CartState {
+  items: CartItem[];
+  totalPrice: number;
+  totalCount: number;
+}
+
+// Discriminated union: mỗi action có type riêng biệt
+// TypeScript dùng "type" field để thu hẹp kiểu trong switch/case
+export type CartAction =
+  | { type: "ADD_ITEM"; payload: Product }
+  | { type: "REMOVE_ITEM"; payload: number }
+  | { type: "CLEAR_CART" };
+```
+
+```ts
+// src/types/api.ts
+// Discriminated union cho trạng thái fetch — thay thế 3 state riêng lẻ
+export type ApiState<T> =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "success"; data: T }
+  | { status: "error"; error: string };
+```
+
+> **Giải thích discriminated union:** Khi `status === "success"`, TypeScript tự biết `data` tồn tại. Khi `status === "error"`, TypeScript tự biết `error` tồn tại. Không cần optional `?` hay non-null assertion `!`.
+
+---
+
+### Bước 4: Migrate `CartContext`
+
+```tsx
+// src/context/CartContext.tsx
+import { createContext, useContext, useReducer, type ReactNode } from "react";
+import type { CartState, CartAction } from "../types/cart";
+
+// createContext cần type rõ ràng — dùng undefined để bắt lỗi dùng ngoài Provider
+const CartContext = createContext<{
+  state: CartState;
+  dispatch: React.Dispatch<CartAction>;
+} | undefined>(undefined);
+
+const initialState: CartState = { items: [], totalPrice: 0, totalCount: 0 };
+
+function cartReducer(state: CartState, action: CartAction): CartState {
+  switch (action.type) {
+    case "ADD_ITEM": {
+      const existingIndex = state.items.findIndex((item) => item.id === action.payload.id);
+      let newItems: CartItem[];
+      if (existingIndex > -1) {
+        newItems = [...state.items];
+        newItems[existingIndex] = { ...newItems[existingIndex], quantity: newItems[existingIndex].quantity + 1 };
+      } else {
+        newItems = [...state.items, { ...action.payload, quantity: 1 }];
+      }
+      return { ...state, items: newItems, ...calculateTotals(newItems) };
+    }
+    case "REMOVE_ITEM": {
+      const newItems = state.items.filter((item) => item.id !== action.payload);
+      return { ...state, items: newItems, ...calculateTotals(newItems) };
+    }
+    case "CLEAR_CART":
+      return initialState;
+    default:
+      return state;
   }
-  return products;
-}, [collectionType, products, wishlistItems]);
-```
+}
 
----
-
-### 5. Skeleton loading thay spinner đơn thuần
-
-```jsx
-const ProductGridSkeleton = () => (
-  <Grid container spacing={{ xs: 1.5, sm: 2 }}>
-    {[...Array(8)].map((_, index) => (
-      <Grid key={index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-        <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-          <Skeleton variant="rectangular" height={180} sx={{ borderRadius: 2, mb: 1.5 }} />
-          <Skeleton width="85%" />
-          <Skeleton width="55%" />
-          <Skeleton width="40%" />
-          <Skeleton variant="rounded" height={32} sx={{ mt: 1.3 }} />
-        </Paper>
-      </Grid>
-    ))}
-  </Grid>
-);
-
-// Trong HomePage — hiển thị cả Loading bar lẫn Skeleton
-{loading ? (
-  <>
-    <Loading />
-    <ProductGridSkeleton />
-  </>
-) : ...}
-```
-
-> **Tại sao Skeleton tốt hơn spinner:** Skeleton giữ nguyên layout trong khi load — tránh layout shift. User thấy trước được cấu trúc trang, cảm giác nhanh hơn.
-
----
-
-### 6. `Snackbar` toast trong `ProductCard`
-
-```jsx
-const [toastOpen, setToastOpen] = useState(false);
-
-const handleAddToCart = () => {
-  dispatch({ type: "ADD_TO_CART", payload: product });
-  setToastOpen(true);
+export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const [state, dispatch] = useReducer(cartReducer, initialState);
+  return <CartContext.Provider value={{ state, dispatch }}>{children}</CartContext.Provider>;
 };
 
-// Sau Card component:
-<Snackbar
-  open={toastOpen}
-  autoHideDuration={1400}
-  onClose={() => setToastOpen(false)}
-  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
->
-  <Alert severity="success" variant="filled">Added to cart successfully!</Alert>
-</Snackbar>
+// Custom hook với guard — throw lỗi rõ ràng nếu dùng ngoài Provider
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) throw new Error("useCart must be used within CartProvider");
+  return context;
+};
 ```
+
+> **Giải thích guard pattern:** `createContext<T | undefined>(undefined)` + kiểm tra `if (!context) throw` là pattern chuẩn. Nếu quên bọc `CartProvider`, lỗi sẽ xuất hiện ngay lập tức thay vì âm thầm trả về `undefined`.
 
 ---
 
-### 7. `CheckoutPage` — `DatePicker` + `orderService` + `useWatch`
+### Bước 5: Migrate `productService`
 
-**Thêm `deliveryDate`** — dùng `DatePicker` từ `@mui/x-date-pickers`, validate ngày phải từ ngày mai:
+```ts
+// src/services/productService.ts
+import axios from "axios";
+import type { Product } from "../types/cart";
 
-```js
-// checkoutSchema.js
-deliveryDate: yup
-  .string()
-  .required("Delivery date is required")
-  .test("future-date", "Delivery date must be from tomorrow", (value) => {
-    if (!value) return false;
-    const selected = new Date(value);
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    return selected >= tomorrow;
-  }),
+export const productService = {
+  // Return type rõ ràng: Promise<Product[]>
+  getProducts: async (): Promise<Product[]> => {
+    const response = await axios.get("https://fakestoreapi.com/products?limit=8");
+    // response.data là any — cần map về đúng shape
+    return response.data.map((item: any) => ({
+      id: item.id,
+      name: item.title,
+      price: Math.round(item.price * 25000),
+      image: item.image,
+      category: item.category,
+    }));
+  },
+};
 ```
 
-```jsx
-// Cần bọc app trong LocalizationProvider (main.jsx)
-<LocalizationProvider dateAdapter={AdapterDayjs}>
-  <RouterProvider router={router} />
-</LocalizationProvider>
+> **Giải thích `item: any`:** API response chưa có type — dùng `any` tạm thời ở đây là chấp nhận được. Nếu muốn strict hơn, có thể định nghĩa `RawProduct` interface cho response.
 
-// Trong form — dùng Controller vì DatePicker không hỗ trợ ref trực tiếp
-<Controller
-  name="deliveryDate"
-  control={control}
-  render={({ field }) => (
-    <DatePicker
-      label="Delivery Date"
-      value={field.value ? dayjs(field.value) : null}
-      onChange={(date) => field.onChange(date ? date.format("YYYY-MM-DD") : "")}
-      slotProps={{ textField: { fullWidth: true, error: !!errors.deliveryDate, helperText: errors.deliveryDate?.message } }}
-    />
-  )}
+---
+
+### Bước 6: Migrate `ProductCard` — typed props
+
+```tsx
+// src/components/ProductCard.tsx
+import type { Product } from "../types/cart";
+import { useCart } from "../context/CartContext";
+
+// Typed props: React.FC<Props> hoặc khai báo trực tiếp trong tham số
+export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
+  const { dispatch } = useCart();
+
+  return (
+    <Card>
+      {/* ... */}
+      <Button onClick={() => dispatch({ type: "ADD_ITEM", payload: product })}>
+        MUA NGAY
+      </Button>
+    </Card>
+  );
+};
+```
+
+> **Lưu ý:** `React.FC<Props>` tự động thêm `children` vào props. Nếu không cần `children`, có thể khai báo thẳng `({ product }: { product: Product })` để rõ ràng hơn.
+
+---
+
+### Bước 7: Generic component `FormBuilder<T>`
+
+```tsx
+// src/components/FormBuilder.tsx
+import { useForm, type Path, type DefaultValues, type FieldValues } from "react-hook-form";
+
+// Interface dùng generic T để type-safe field names
+interface FormField<T> {
+  name: Path<T>;       // Path<T> đảm bảo name phải là key hợp lệ của T
+  label: string;
+  type?: string;
+  required?: boolean;
+}
+
+interface FormBuilderProps<T extends FieldValues> {
+  title: string;
+  initialValues: DefaultValues<T>;
+  fields: FormField<T>[];
+  onSubmit: (data: T) => void;
+}
+
+// Generic component — T được infer từ props khi dùng
+export function FormBuilder<T extends FieldValues>({
+  title,
+  initialValues,
+  fields,
+  onSubmit,
+}: FormBuilderProps<T>) {
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<T>({
+    defaultValues: initialValues,
+  });
+
+  return (
+    <form onSubmit={handleSubmit((data) => { onSubmit(data); reset(); })}>
+      {fields.map((field) => (
+        <TextField
+          key={field.name.toString()}
+          label={field.label}
+          type={field.type || "text"}
+          {...register(field.name, {
+            required: field.required ? `${field.label} không được để trống` : false,
+          })}
+          error={!!errors[field.name]}
+          helperText={errors[field.name]?.message as string}
+        />
+      ))}
+      <Button type="submit">Xác nhận gửi</Button>
+    </form>
+  );
+}
+```
+
+Cách dùng — TypeScript tự infer `T` từ `initialValues`:
+
+```tsx
+// Dùng FormBuilder với type LoginForm
+interface LoginForm {
+  email: string;
+  password: string;
+}
+
+<FormBuilder<LoginForm>
+  title="Đăng nhập"
+  initialValues={{ email: "", password: "" }}
+  fields={[
+    { name: "email", label: "Email", required: true },
+    { name: "password", label: "Mật khẩu", type: "password", required: true },
+  ]}
+  onSubmit={(data) => console.log(data)} // data: LoginForm — fully typed
 />
 ```
 
-**`useWatch`** — theo dõi `provinceCode` để hiển thị tên tỉnh trong order summary mà không re-render toàn form:
-
-```js
-const provinceCode = useWatch({ control, name: "provinceCode" });
-
-const selectedProvince = useMemo(
-  () => provinces.find((item) => String(item.code) === String(provinceCode)),
-  [provinceCode, provinces]
-);
-```
-
-**`orderService`** — gọi API thực tế khi submit:
-
-```js
-// src/services/orderService.js
-export const createOrder = async (cartItems) => {
-  const response = await axios.post("https://jsonplaceholder.typicode.com/posts", {
-    customerId: 1,
-    products: cartItems.map((item) => ({ productId: item.id, quantity: item.quantity })),
-    status: "new",
-  });
-  return response.data;
-};
-```
-
-```jsx
-// onSubmit trong CheckoutPage
-const onSubmit = async (formData) => {
-  try {
-    setSubmitting(true);
-    await createOrder(cartItems.map((item) => ({
-      ...item,
-      shippingProvince: selectedProvince?.name || "",
-      deliveryDate: formData.deliveryDate,
-    })));
-    setSuccess(true);
-    dispatch({ type: "CLEAR_CART" });
-    reset();
-  } catch {
-    setSubmitError("Cannot place order now. Please try again.");
-  } finally {
-    setSubmitting(false);
-  }
-};
-```
+> **Giải thích `Path<T>`:** `Path<T>` từ react-hook-form là utility type trả về tất cả key hợp lệ của `T` (kể cả nested). Nếu truyền `name: "emaill"` (typo), TypeScript báo lỗi ngay.
 
 ---
 
-### 8. Theme nâng cao
+### Bước 8: Custom hook `useApi<T>` với `AbortController`
 
-```jsx
-// src/theme/theme.jsx
-let customTheme = createTheme({
-  palette: {
-    mode,
-    primary: { main: "#0B74E5" },
-    secondary: { main: "#FF424E" },
-    background: {
-      default: mode === "light" ? "#f3f6ff" : "#0d1324",
-      paper: mode === "light" ? "#ffffff" : "#1a243d",
-    },
-  },
-  typography: { fontFamily: "Inter, sans-serif" },
-  shape: { borderRadius: 12 },
-  components: {
-    MuiButton: {
-      styleOverrides: { root: { textTransform: "none", fontWeight: 700 } },
-    },
-  },
-});
+```ts
+// src/hooks/useApi.ts
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import type { ApiState } from "../types/api";
 
-// responsiveFontSizes: tự động scale font theo breakpoint — không cần viết tay
-customTheme = responsiveFontSizes(customTheme);
+export function useApi<T>(url: string): ApiState<T> {
+  const [state, setState] = useState<ApiState<T>>({ status: "idle" });
+  // useRef để cache — không trigger re-render khi cache thay đổi
+  const cache = useRef<Record<string, T>>({});
+
+  useEffect(() => {
+    if (!url) return;
+
+    // Trả về từ cache nếu đã fetch trước đó
+    if (cache.current[url]) {
+      setState({ status: "success", data: cache.current[url] });
+      return;
+    }
+
+    // AbortController: hủy request khi component unmount hoặc url thay đổi
+    const controller = new AbortController();
+    setState({ status: "loading" });
+
+    axios
+      .get<T>(url, { signal: controller.signal })
+      .then((res) => {
+        cache.current[url] = res.data;
+        setState({ status: "success", data: res.data });
+      })
+      .catch((err) => {
+        if (axios.isCancel(err)) return; // Bỏ qua lỗi do abort
+        setState({ status: "error", error: err.message });
+      });
+
+    // Cleanup: abort request khi effect cleanup
+    return () => controller.abort();
+  }, [url]);
+
+  return state;
+}
 ```
+
+Cách dùng với discriminated union:
+
+```tsx
+const state = useApi<Product[]>("https://fakestoreapi.com/products");
+
+// TypeScript biết chính xác shape của state trong mỗi nhánh
+if (state.status === "loading") return <CircularProgress />;
+if (state.status === "error") return <Alert severity="error">{state.error}</Alert>;
+if (state.status === "success") return <ProductGrid products={state.data} />;
+// state.status === "idle" — chưa fetch
+```
+
+> **Giải thích `AbortController`:** Khi component unmount trong khi đang fetch (ví dụ: user navigate đi), cleanup function gọi `controller.abort()` → request bị hủy → tránh lỗi "setState on unmounted component".
 
 ---
 
-## Cấu trúc file project hoàn chỉnh
+### Bước 9: Kiểm tra
+
+- [ ] `npm run build` không có lỗi TypeScript.
+- [ ] Truyền sai type vào `ProductCard` → TypeScript báo lỗi ngay trong editor.
+- [ ] Dùng `FormBuilder` với `name` không tồn tại trong interface → TypeScript báo lỗi.
+- [ ] `useCart()` dùng ngoài `CartProvider` → throw lỗi rõ ràng.
+- [ ] `useApi` trả đúng `data` type khi `status === "success"`.
+
+---
+
+## Cấu trúc file sau bài 9
 
 ```
 src/
-├── api/
-│   └── axiosClient.js
 ├── components/
-│   ├── cart/
-│   │   ├── CartItem.jsx
-│   │   └── CartSummary.jsx         ← tách từ CartPage
-│   ├── common/
-│   │   ├── BackButton.jsx          ← mới
-│   │   ├── EmptyState.jsx
-│   │   ├── Loading.jsx             ← mới (LinearProgress + message)
-│   │   ├── SearchBar.jsx           ← mới
-│   │   └── ThemeToggle.jsx
-│   ├── layout/
-│   │   ├── Footer.jsx              ← tách từ MainLayout
-│   │   ├── Header.jsx              ← tách từ MainLayout
-│   │   └── MainLayout.jsx          ← giữ search state, truyền qua Outlet
-│   └── product/
-│       ├── ProductCard.jsx         ← thêm toast, hover animation
-│       ├── ProductGrid.jsx         ← tách từ HomePage
-│       └── ProductInfo.jsx         ← tách từ ProductDetailPage
+│   ├── FormBuilder.tsx         ← mới: generic component
+│   ├── ProductCard.tsx         ← migrate: typed props
+│   ├── ProductList.tsx         ← migrate: typed props
+│   └── ShoppingCart.tsx        ← migrate: typed props
 ├── context/
-│   ├── CartProvider.jsx            ← optimize persist: lưu id+qty, hydrate từ API
-│   └── cartReducer.js              ← thêm HYDRATE_STATE action
+│   └── CartContext.tsx         ← migrate: typed context + reducer
+├── hooks/
+│   └── useApi.ts               ← mới: generic custom hook
 ├── pages/
-│   ├── CartPage.jsx
-│   ├── CheckoutPage.jsx            ← thêm DatePicker, orderService, useWatch
-│   ├── HomePage.jsx                ← thêm debounce, skeleton, collectionType filter
-│   └── ProductDetailPage.jsx
-├── router/
-│   └── index.jsx
-├── schemas/
-│   └── checkoutSchema.js           ← thêm deliveryDate validation
+│   └── ShoppingPage.tsx        ← migrate: typed state
 ├── services/
-│   ├── locationService.js
-│   ├── orderService.js             ← mới: createOrder, updateOrder, deleteOrder
-│   └── productService.js           ← thêm getProductsByIds (Promise.all)
-├── theme/
-│   └── theme.jsx                   ← thêm responsiveFontSizes, custom background
-└── main.jsx                        ← thêm LocalizationProvider
+│   └── productService.ts       ← migrate: typed return
+├── types/
+│   ├── cart.ts                 ← mới: Product, CartItem, CartState, CartAction
+│   └── api.ts                  ← mới: ApiState<T>
+├── App.tsx
+└── main.tsx
 ```
 
 ---
 
-## Checklist kiểm tra
-
-- [ ] Reload trang → Shopping Cart khôi phục đúng (data mới từ API, không phải cache cũ).
-- [ ] Gõ search → không fetch ngay, chờ 400ms sau khi dừng gõ.
-- [ ] Skeleton hiển thị khi Loading.
-- [ ] Click "Add To Cart" → toast xuất hiện góc phải dưới.
-- [ ] Card hover → nhấc lên nhẹ.
-- [ ] Filter "Wishlist only" → chỉ hiển thị sản phẩm đã tim, không gọi API.
-- [ ] Vào `/checkout` → DatePicker không cho chọn ngày hôm nay hoặc quá khứ.
-- [ ] Submit checkout → gọi `createOrder`, nút hiển thị "Placing order...", sau đó clear cart.
-- [ ] Lỗi API → hiển thị Alert error, không clear cart.
-- [ ] Dark mode toggle hoạt động, font scale đúng theo màn hình.
-
----
-
-## Tổng kết kiến thức bài 10
+## Tổng kết kiến thức bài 9
 
 | Khái niệm | Áp dụng trong bài |
 |---|---|
-| Persist nâng cao | Lưu `id+qty`, hydrate bằng `getProductsByIds` khi app khởi động |
-| `Promise.all` | Fetch nhiều sản phẩm song song trong `getProductsByIds` |
-| `useOutletContext` | Truyền `search` từ `MainLayout` xuống `HomePage` |
-| Search debounce | `useEffect` + `setTimeout/clearTimeout` — delay 400ms |
-| `useMemo` filter | `collectionType` lọc wishlist phía client, không re-fetch |
-| `Skeleton` | Placeholder loading giữ layout, tránh layout shift |
-| `Snackbar` + `Alert` | Toast notification khi thêm vào giỏ |
-| `DatePicker` + `dayjs` | Chọn ngày giao hàng, validate ngày tương lai |
-| `useWatch` | Theo dõi `provinceCode` để hiển thị tên tỉnh, không re-render toàn form |
-| `orderService` | `createOrder`, `updateOrder`, `deleteOrder` — CRUD đơn hàng |
-| `responsiveFontSizes` | Tự động scale font theo breakpoint |
-| Component tách nhỏ | `Header`, `Footer`, `SearchBar`, `BackButton`, `Loading`, `ProductGrid`, `ProductInfo`, `CartSummary` |
+| `interface` / `type` | `Product`, `CartItem`, `CartState`, `CartAction` |
+| Discriminated union | `CartAction`, `ApiState<T>` — thu hẹp type trong switch/if |
+| Typed `useState` | `useState<ApiState<T>>({ status: "idle" })` |
+| Typed `useReducer` | `useReducer(cartReducer, initialState)` — infer từ reducer |
+| Typed context | `createContext<T \| undefined>(undefined)` + guard hook |
+| Generic component | `FormBuilder<T extends FieldValues>` |
+| `Path<T>` | Type-safe field names trong `FormBuilder` |
+| Generic hook | `useApi<T>(url)` — infer data type từ caller |
+| `AbortController` | Hủy fetch khi component unmount |
+| `useRef` cache | Tránh fetch lại URL đã có kết quả |
 
 ---
 
 **Lưu ý:**
-- Đây là bài cuối — project `bai-10` là phiên bản hoàn chỉnh nhất của toàn khóa.
-- GV cung cấp project đã hoàn thành bài 8 cho học viên tự optimize theo hướng dẫn trên.
+- Bài này tập trung vào cách migrate — không cần migrate toàn bộ project, chỉ cần hiểu pattern ở các file quan trọng.
+- Các bài tập (9.1, 9.2, 9.3) là project độc lập để luyện từng khái niệm riêng, không phải tiếp nối project bài 8.
+- Project bài 8 (JavaScript) vẫn là nền tảng — bài 10 sẽ hoàn thiện project đó.

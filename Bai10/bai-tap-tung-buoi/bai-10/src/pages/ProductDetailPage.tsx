@@ -9,11 +9,12 @@ import EmptyState from "../components/common/EmptyState";
 import ProductInfo from "../components/product/ProductInfo";
 
 import { getProductById } from "../services/productService";
+import { Product } from "../types";
 
 const ProductDetailPage = () => {
   const { id } = useParams();
 
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -21,7 +22,7 @@ const ProductDetailPage = () => {
     const fetchProduct = async () => {
       try {
         setError("");
-        const data = await getProductById(id);
+        const data = await getProductById(Number(id));
 
         setProduct(data);
       } catch {

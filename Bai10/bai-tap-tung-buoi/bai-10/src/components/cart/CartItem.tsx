@@ -3,8 +3,9 @@ import { Box, Button, Card, CardContent, CardMedia, IconButton, Stack, Typograph
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import { useCart } from "../../context/CartProvider";
+import { CartItem as CartItemType } from "../../types/cart";
 
-const CartItem = ({ item }) => {
+const CartItem = ({ item }: { item: CartItemType }) => {
   const { dispatch } = useCart();
 
   return (
