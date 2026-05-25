@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "studentId": 1,
+    "classId": 1,
+    "subject": "programming",
+    "midterm": 8,
+    "final": 9,
+    "average": 8.6,
+    "grade": "A",
+    "recordedAt": "2026-05-19T08:00:00.000Z",
+    "updatedAt": "2026-05-19T08:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "studentId": 2,
+    "classId": 1,
+    "subject": "programming",
+    "midterm": 6,
+    "final": 7,
+    "average": 6.6,
+    "grade": "C",
+    "recordedAt": "2026-05-19T08:00:00.000Z",
+    "updatedAt": "2026-05-19T08:00:00.000Z"
+  }
+]

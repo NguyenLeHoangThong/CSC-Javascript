@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "title": "Học Node.js",
+    "content": "Nội dung bài viết đầu tiên...",
+    "category": "tech",
+    "tags": ["nodejs", "backend"],
+    "createdAt": "2026-05-19T08:00:00.000Z",
+    "updatedAt": "2026-05-19T08:00:00.000Z"
+  }
+]

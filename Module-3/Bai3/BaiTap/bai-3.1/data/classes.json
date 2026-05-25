@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "name": "Lập trình Node.js",
+    "subject": "programming",
+    "teacherName": "Thầy Nam",
+    "maxStudents": 30,
+    "currentStudents": 25,
+    "schedule": "Thứ 2 & 4, 18:00-20:00",
+    "createdAt": "2026-05-19T08:00:00.000Z",
+    "updatedAt": "2026-05-19T08:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "name": "Toán cao cấp",
+    "subject": "math",
+    "teacherName": "Cô Hà",
+    "maxStudents": 40,
+    "currentStudents": 40,
+    "schedule": "Thứ 3 & 5, 08:00-10:00",
+    "createdAt": "2026-05-19T08:00:00.000Z",
+    "updatedAt": "2026-05-19T08:00:00.000Z"
+  }
+]
