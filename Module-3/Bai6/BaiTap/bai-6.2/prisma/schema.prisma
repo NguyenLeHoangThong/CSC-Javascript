@@ -1,0 +1,27 @@
+// Bài 6.2 — Accounts + money transfers, to practise atomic transactions.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id      Int     @id @default(autoincrement())
+  owner   String  @db.VarChar(100)
+  balance Decimal @default(0) @db.Decimal(12, 2)
+
+  @@map("accounts")
+}
+
+model Transfer {
+  id        Int      @id @default(autoincrement())
+  fromId    Int      @map("from_id")
+  toId      Int      @map("to_id")
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("transfers")
+}

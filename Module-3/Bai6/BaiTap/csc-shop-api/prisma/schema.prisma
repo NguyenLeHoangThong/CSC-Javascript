@@ -1,0 +1,87 @@
+// Prisma schema for the CSC Shop API (Bài 6)
+// Adds Order + OrderItem on top of Category/Product so we can practise
+// transactions (safe stock decrement) and aggregate queries (stats).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  pending
+  paid
+  shipped
+  completed
+  cancelled
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(100)
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  slug        String   @unique @db.VarChar(220)
+  description String   @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  thumbnail   String   @db.VarChar(500)
+  brand       String?  @db.VarChar(100)
+  stock       Int      @default(0)
+  rating      Decimal  @default(0) @db.Decimal(2, 1)
+  ratingCount Int      @default(0) @map("rating_count")
+  categoryId  Int      @map("category_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  customerName String      @map("customer_name") @db.VarChar(100)
+  email        String      @db.VarChar(150)
+  phone        String      @db.VarChar(20)
+  address      String      @db.VarChar(255)
+  provinceCode String?     @map("province_code") @db.VarChar(20)
+  wardCode     String?     @map("ward_code") @db.VarChar(20)
+  note         String?     @db.VarChar(300)
+  deliveryDate DateTime?   @map("delivery_date")
+  totalAmount  Decimal     @map("total_amount") @db.Decimal(12, 2)
+  status       OrderStatus @default(pending)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  productId Int     @map("product_id")
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2) // unit price captured at purchase time
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}

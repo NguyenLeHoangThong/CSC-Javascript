@@ -1,0 +1,27 @@
+// Bài 5.1 — a single Task model to practise basic Prisma CRUD.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  todo
+  doing
+  done
+}
+
+model Task {
+  id          Int        @id @default(autoincrement())
+  title       String     @db.VarChar(200)
+  description String?
+  status      TaskStatus @default(todo)
+  priority    Int        @default(1) // 1 = low ... 5 = high
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@map("tasks")
+}

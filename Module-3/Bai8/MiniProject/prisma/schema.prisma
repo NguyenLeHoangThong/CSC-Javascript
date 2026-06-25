@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+}
+
+enum StudentStatus {
+  active
+  inactive
+  graduated
+}
+
+enum LetterGrade {
+  A
+  B
+  C
+  D
+  F
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(150)
+  password     String // hash bcrypt — không giới hạn độ dài
+  role         Role     @default(user)
+  refreshToken String?  @map("refresh_token") // refresh token hiện tại, dùng để revoke
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Class {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(100) @unique
+  subject       String    @db.VarChar(50)
+  teacherName   String    @db.VarChar(100) @map("teacher_name")
+  maxStudents   Int       @default(30) @map("max_students")
+  schedule      String?   @db.VarChar(255)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  students      Student[]
+
+  @@map("classes")
+}
+
+model Student {
+  id            Int           @id @default(autoincrement())
+  fullName      String        @db.VarChar(100) @map("full_name")
+  email         String        @unique @db.VarChar(150)
+  phone         String?       @db.VarChar(15)
+  classId       Int?          @map("class_id")
+  gpa           Decimal       @default(0) @db.Decimal(3,2)
+  status        StudentStatus @default(active)
+  enrolledAt    DateTime      @default(now()) @map("enrolled_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  class         Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
+  grades        Grade[]
+
+  @@map("students")
+}
+
+model Grade {
+  id            Int         @id @default(autoincrement())
+  studentId     Int         @map("student_id")
+  subject       String      @db.VarChar(50)
+  midterm       Decimal     @db.Decimal(4,1)
+  final         Decimal     @db.Decimal(4,1)
+  average       Decimal     @db.Decimal(4,2)
+  letterGrade   LetterGrade @map("letter_grade")
+  recordedAt    DateTime    @default(now()) @map("recorded_at")
+
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subject])
+  @@map("grades")
+}

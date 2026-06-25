@@ -1,0 +1,30 @@
+// Bài 5.2 — a one-to-many relation: one Genre has many Movies.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Genre {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique @db.VarChar(60)
+  movies Movie[]
+
+  @@map("genres")
+}
+
+model Movie {
+  id        Int      @id @default(autoincrement())
+  title     String   @db.VarChar(200)
+  year      Int
+  rating    Float    @default(0)
+  genreId   Int      @map("genre_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Restrict)
+
+  @@map("movies")
+}

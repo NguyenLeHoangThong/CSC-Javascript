@@ -1,0 +1,47 @@
+// Prisma schema for the CSC Shop API (Bài 5)
+// Two models for now: Category (1) ──< Product (many).
+// Auth (User) and Orders are added in later lessons (Bài 6/7/8).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(100) // URL-friendly identifier, e.g. "smartphones"
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // One category has many products
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  slug        String   @unique @db.VarChar(220)
+  description String   @db.Text
+  price       Decimal  @db.Decimal(10, 2) // money — always use Decimal, never Float
+  thumbnail   String   @db.VarChar(500)
+  brand       String?  @db.VarChar(100)
+  stock       Int      @default(0)
+  rating      Decimal  @default(0) @db.Decimal(2, 1) // 0.0 - 5.0
+  ratingCount Int      @default(0) @map("rating_count")
+  categoryId  Int      @map("category_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // many Products belong to one Category. Restrict = cannot delete a category that still has products.
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@map("products")
+}

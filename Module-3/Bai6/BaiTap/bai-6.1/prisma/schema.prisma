@@ -1,0 +1,20 @@
+// Bài 6.1 — Blog posts for practising pagination / filter / search / sort.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String   @db.VarChar(200)
+  content   String
+  published Boolean  @default(false)
+  views     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("posts")
+}
