@@ -1,7 +1,7 @@
 {
-  "name": "bai-6.1-blog-pagination",
+  "name": "bai-6.1-employee-management",
   "version": "1.0.0",
-  "description": "Bài 6.1 — pagination + filter + search + sort with Prisma (Blog posts)",
+  "description": "Bài 6.1 — Production-ready Employee API: validateQuery, transaction, groupBy stats",
   "prisma": { "seed": "ts-node prisma/seed.ts" },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

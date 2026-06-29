@@ -1,7 +1,7 @@
 {
-  "name": "bai-5.2-movie-catalog",
+  "name": "shop-backend-bai5.2",
   "version": "1.0.0",
-  "description": "Bài 5.2 — Prisma CRUD with a relation: Genre 1──< Movie",
+  "description": "CSC Shop backend — Bài 5.2: Prisma (Category + Product CRUD)",
   "prisma": { "seed": "ts-node prisma/seed.ts" },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

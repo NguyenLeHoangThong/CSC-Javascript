@@ -1,4 +1,4 @@
-// Bài 5.1 — a single Task model to practise basic Prisma CRUD.
+// Bài 5.1 — Course management. Practise relations, include, _count and unique constraints.
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,20 +8,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum TaskStatus {
-  todo
-  doing
-  done
+model Category {
+  id      Int      @id @default(autoincrement())
+  name    String   @db.VarChar(100)
+  slug    String   @unique @db.VarChar(100)
+  courses Course[]
+
+  @@map("categories")
 }
 
-model Task {
-  id          Int        @id @default(autoincrement())
-  title       String     @db.VarChar(200)
-  description String?
-  status      TaskStatus @default(todo)
-  priority    Int        @default(1) // 1 = low ... 5 = high
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+enum CourseStatus {
+  draft
+  published
+  archived
+}
 
-  @@map("tasks")
+model Course {
+  id          Int          @id @default(autoincrement())
+  title       String       @db.VarChar(200)
+  description String?      @db.Text
+  price       Decimal      @db.Decimal(15, 2)
+  duration    Int // minutes
+  categoryId  Int          @map("category_id")
+  status      CourseStatus @default(draft)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  category    Category     @relation(fields: [categoryId], references: [id])
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Enrollment {
+  id           Int      @id @default(autoincrement())
+  studentName  String   @map("student_name") @db.VarChar(100)
+  studentEmail String   @map("student_email") @db.VarChar(150)
+  courseId     Int      @map("course_id")
+  enrolledAt   DateTime @default(now()) @map("enrolled_at")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // 1 email can't enroll the same course twice
+  @@unique([studentEmail, courseId])
+  @@map("enrollments")
 }

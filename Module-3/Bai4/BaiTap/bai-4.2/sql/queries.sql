@@ -1,68 +1,42 @@
 -- ============================================================
--- Bài 4.2 — Employees queries. Run schema.sql first.
--- Focus: aggregates, HAVING, and window functions.
+-- Bài 4.2 — CSC Shop sample queries. Run schema.sql + seed.sql first.
 -- ============================================================
 
--- Q1: Each employee with department name (LEFT JOIN keeps Heidi)
-SELECT e.full_name, d.name AS department, e.salary
-FROM employees e
-LEFT JOIN departments d ON d.id = e.department_id
-ORDER BY e.full_name;
+-- 1. Sản phẩm kèm tên category
+SELECT p.title, p.price, p.stock, c.name AS category
+FROM   products p
+JOIN   categories c ON c.id = p.category_id
+ORDER  BY p.price DESC;
 
--- Q2: Average / min / max salary per department (GROUP BY + aggregates)
-SELECT d.name AS department,
-       COUNT(e.id) AS headcount,
-       ROUND(AVG(e.salary), 2) AS avg_salary,
-       MIN(e.salary) AS min_salary,
-       MAX(e.salary) AS max_salary
-FROM departments d
-LEFT JOIN employees e ON e.department_id = d.id
-GROUP BY d.id, d.name
-ORDER BY avg_salary DESC NULLS LAST;
+-- 2. Số sản phẩm + giá trung bình theo category
+SELECT c.name, COUNT(p.id) AS product_count, ROUND(AVG(p.price)) AS avg_price
+FROM   categories c
+LEFT JOIN products p ON p.category_id = c.id
+GROUP  BY c.id, c.name
+ORDER  BY product_count DESC;
 
--- Q3: Departments whose average salary is above 2000 (HAVING)
-SELECT d.name, ROUND(AVG(e.salary), 2) AS avg_salary
-FROM departments d
-JOIN employees e ON e.department_id = d.id
-GROUP BY d.id, d.name
-HAVING AVG(e.salary) > 2000;
+-- 3. Tổng tiền mỗi đơn (JOIN order_items, dùng snapshot price)
+SELECT o.id, o.user_name, o.status, SUM(oi.price * oi.quantity) AS items_total
+FROM   orders o
+JOIN   order_items oi ON oi.order_id = o.id
+GROUP  BY o.id, o.user_name, o.status
+ORDER  BY items_total DESC;
 
--- Q4: Rank employees by salary WITHIN each department (RANK + PARTITION BY)
-SELECT full_name, department, salary, salary_rank
-FROM (
-  SELECT e.full_name,
-         d.name AS department,
-         e.salary,
-         RANK() OVER (PARTITION BY e.department_id ORDER BY e.salary DESC) AS salary_rank
-  FROM employees e
-  JOIN departments d ON d.id = e.department_id
-) ranked
-ORDER BY department, salary_rank;
+-- 4. Sản phẩm bán chạy (tổng quantity)
+SELECT p.title, SUM(oi.quantity) AS sold
+FROM   products p
+JOIN   order_items oi ON oi.product_id = p.id
+GROUP  BY p.id, p.title
+ORDER  BY sold DESC
+LIMIT  5;
 
--- Q5: Each employee's salary vs the department average (window AVG)
-SELECT e.full_name,
-       d.name AS department,
-       e.salary,
-       ROUND(AVG(e.salary) OVER (PARTITION BY e.department_id), 2) AS dept_avg,
-       ROUND(e.salary - AVG(e.salary) OVER (PARTITION BY e.department_id), 2) AS diff_from_avg
-FROM employees e
-JOIN departments d ON d.id = e.department_id
-ORDER BY d.name, e.salary DESC;
+-- 5. Sản phẩm chưa từng bán (LEFT JOIN + IS NULL)
+SELECT p.title
+FROM   products p
+LEFT JOIN order_items oi ON oi.product_id = p.id
+WHERE  oi.id IS NULL
+ORDER  BY p.title;
 
--- Q6: Top earner of EACH department (window + filter via subquery)
-SELECT full_name, department, salary
-FROM (
-  SELECT e.full_name,
-         d.name AS department,
-         e.salary,
-         ROW_NUMBER() OVER (PARTITION BY e.department_id ORDER BY e.salary DESC) AS rn
-  FROM employees e
-  JOIN departments d ON d.id = e.department_id
-) t
-WHERE rn = 1;
-
--- Q7: Running total of salaries ordered by hire date (window SUM)
-SELECT full_name, hired_on, salary,
-       SUM(salary) OVER (ORDER BY hired_on) AS running_payroll
-FROM employees
-ORDER BY hired_on;
+-- 6. Test trigger updated_at: UPDATE rồi xem updated_at đổi
+UPDATE products SET stock = stock - 1 WHERE id = 1;
+SELECT id, title, created_at, updated_at FROM products WHERE id = 1;

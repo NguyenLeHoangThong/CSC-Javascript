@@ -1,17 +1,23 @@
 {
-  "name": "bai-8.1-rbac",
+  "name": "bai-8.1-project-management",
   "version": "1.0.0",
-  "description": "Bài 8.1 — RBAC: authorize(...roles) middleware on a Posts API (in-memory)",
+  "description": "Bài 8.1 — Project/Task API with RBAC (authorize) + ownership (authorizeOwner)",
+  "prisma": { "seed": "ts-node prisma/seed.ts" },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:studio": "prisma studio"
   },
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^5.0.0",
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "yup": "^1.3.3",
     "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2"
   },
@@ -23,6 +29,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "typescript": "^5.1.6",
     "ts-node": "^10.9.1",
-    "ts-node-dev": "^2.0.0"
+    "ts-node-dev": "^2.0.0",
+    "prisma": "^5.0.0"
   }
 }

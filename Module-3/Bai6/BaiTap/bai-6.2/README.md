@@ -1,30 +1,55 @@
-# Bài 6.2 — Wallet transfer (transaction)
+# Bài 6.2 — CSC Shop: Order API với Transaction
 
-Bài lẻ luyện **transaction nguyên tử**: chuyển tiền giữa 2 tài khoản bằng `prisma.$transaction`.
+**Bài tập CSC Shop** của Bài 6. Tiếp tục `shop-backend` (từ 5.2), thêm `Order` + `OrderItem` và
+endpoint đặt hàng dùng **transaction 4 bước**.
 
-## Chạy
+## 🎯 Kiến thức — `POST /orders` (4 bước trong 1 transaction)
+1. **Kiểm tra stock** từng item (không có → 404, thiếu hàng → 409 kèm tên + số còn lại)
+2. **Tính `totalAmount`** = Σ(price × quantity) theo giá snapshot
+3. **Tạo `Order` + `OrderItem`** bằng nested write — snapshot `title`/`price`/`thumbnail`
+4. **Trừ `stock`** từng sản phẩm (`decrement`)
+
+> Nếu bất kỳ bước nào fail (vd hết hàng) → **toàn bộ rollback**: không tạo order, không trừ stock.
+
+## 🆕 So với 5.2
+| Thêm | File |
+|------|------|
+| `Order`, `OrderItem`, enum `OrderStatus` | `prisma/schema.prisma` |
+| Tạo đơn bằng transaction | `services/orderService.ts` |
+| Route `/orders` | `routes/orderRoutes.ts` |
+
+## 🚀 Chạy
 ```bash
 npm install
 cp .env.example .env
-npm run prisma:migrate -- --name init
-npm run prisma:seed          # Alice=1000, Bob=500
-npm run dev                  # http://localhost:3002
+npm run prisma:migrate -- --name add_orders
+npm run prisma:seed
+npm run dev                  # http://localhost:3000
 ```
 
-## Endpoints
+## 📡 Endpoints mới
 | Method | Endpoint | Mô tả |
 |--------|----------|-------|
-| GET | `/accounts` | danh sách tài khoản + số dư |
-| POST | `/transfer` | `{ fromId, toId, amount }` |
-| GET | `/transfers` | lịch sử chuyển khoản |
+| POST | `/orders` | tạo đơn (transaction) |
+| GET | `/orders/:id` | chi tiết đơn kèm `items` |
 
-## Thử
+### Thử
 ```bash
-curl -X POST localhost:3002/transfer -H "Content-Type: application/json" -d '{"fromId":1,"toId":2,"amount":300}'
-curl -X POST localhost:3002/transfer -H "Content-Type: application/json" -d '{"fromId":2,"toId":1,"amount":99999}'  # → 400 Insufficient balance, KHÔNG đổi số dư
+# Đặt hàng thành công
+curl -X POST localhost:3000/api/v1/orders -H "Content-Type: application/json" -d '{
+  "userName":"Nguyen A","userEmail":"a@gmail.com","userPhone":"0901234567","address":"123 Le Loi",
+  "items":[{"productId":1,"title":"iPhone 15 Pro","price":28990000,"quantity":1,"thumbnail":"x"}]
+}'
+# Đặt vượt stock → 409, KHÔNG trừ stock
+curl -X POST localhost:3000/api/v1/orders -H "Content-Type: application/json" -d '{
+  "userName":"Test","userEmail":"t@gmail.com","userPhone":"0900000000","address":"Test",
+  "items":[{"productId":1,"title":"iPhone 15 Pro","price":28990000,"quantity":9999,"thumbnail":"x"}]
+}'
 ```
 
-## Ghi chú
-- Trừ tiền + cộng tiền + ghi log nằm trong **1** `$transaction` → hoặc thành công hết, hoặc rollback hết.
-- Nếu số dư không đủ → `throw` → toàn bộ rollback, số dư giữ nguyên.
-- Dùng `Prisma.Decimal` cho tiền (không dùng Float).
+## 🔎 Ghi chú
+- `OrderItem` lưu snapshot → đơn cũ không đổi dù product sau này đổi giá/tên.
+- `throw` trong `$transaction` tự động rollback — không cần rollback thủ công.
+
+## ➡️ Buổi sau
+Bài 7.2 — thêm **Authentication** (User + JWT) và guest checkout cho shop-backend.

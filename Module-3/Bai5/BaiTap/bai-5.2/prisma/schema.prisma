@@ -1,4 +1,5 @@
-// Bài 5.2 — a one-to-many relation: one Genre has many Movies.
+// CSC Shop backend — Bài 5.2
+// Re-declare the Bài 4.2 SQL schema using Prisma. @updatedAt replaces the SQL trigger.
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,23 +9,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Genre {
-  id     Int     @id @default(autoincrement())
-  name   String  @unique @db.VarChar(60)
-  movies Movie[]
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  slug      String    @unique @db.VarChar(100)
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at")
 
-  @@map("genres")
+  @@map("categories")
 }
 
-model Movie {
-  id        Int      @id @default(autoincrement())
-  title     String   @db.VarChar(200)
-  year      Int
-  rating    Float    @default(0)
-  genreId   Int      @map("genre_id")
-  createdAt DateTime @default(now()) @map("created_at")
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  price       Decimal  @db.Decimal(15, 2)
+  thumbnail   String
+  description String?  @db.Text
+  brand       String?  @db.VarChar(100)
+  stock       Int      @default(0)
+  rating      Decimal  @default(0) @db.Decimal(3, 2)
+  ratingCount Int      @default(0) @map("rating_count")
+  categoryId  Int      @map("category_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at") // replaces the SQL trigger from Bài 4.2
 
-  genre Genre @relation(fields: [genreId], references: [id], onDelete: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
-  @@map("movies")
+  @@map("products")
 }

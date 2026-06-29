@@ -1,4 +1,5 @@
-// Bài 6.2 — Accounts + money transfers, to practise atomic transactions.
+// CSC Shop backend — Bài 6.2
+// Adds Order + OrderItem so we can practise a multi-step transaction (check + decrement stock).
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,20 +9,75 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Account {
-  id      Int     @id @default(autoincrement())
-  owner   String  @db.VarChar(100)
-  balance Decimal @default(0) @db.Decimal(12, 2)
-
-  @@map("accounts")
+enum OrderStatus {
+  pending
+  confirmed
+  shipping
+  delivered
+  cancelled
 }
 
-model Transfer {
-  id        Int      @id @default(autoincrement())
-  fromId    Int      @map("from_id")
-  toId      Int      @map("to_id")
-  amount    Decimal  @db.Decimal(12, 2)
-  createdAt DateTime @default(now()) @map("created_at")
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  slug      String    @unique @db.VarChar(100)
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at")
 
-  @@map("transfers")
+  @@map("categories")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  price       Decimal  @db.Decimal(15, 2)
+  thumbnail   String
+  description String?  @db.Text
+  brand       String?  @db.VarChar(100)
+  stock       Int      @default(0)
+  rating      Decimal  @default(0) @db.Decimal(3, 2)
+  ratingCount Int      @default(0) @map("rating_count")
+  categoryId  Int      @map("category_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  userName     String      @map("user_name") @db.VarChar(100)
+  userEmail    String      @map("user_email") @db.VarChar(150)
+  userPhone    String      @map("user_phone") @db.VarChar(15)
+  address      String
+  provinceCode String?     @map("province_code") @db.VarChar(20)
+  wardCode     String?     @map("ward_code") @db.VarChar(20)
+  deliveryDate DateTime?   @map("delivery_date")
+  note         String?
+  totalAmount  Decimal     @map("total_amount") @db.Decimal(15, 2)
+  status       OrderStatus @default(pending)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  productId Int     @map("product_id")
+  title     String  @db.VarChar(200) // snapshot
+  price     Decimal @db.Decimal(15, 2) // snapshot
+  quantity  Int
+  thumbnail String
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
 }

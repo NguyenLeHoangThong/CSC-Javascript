@@ -1,17 +1,23 @@
 {
-  "name": "bai-8.2-ownership",
-  "version": "1.0.0",
-  "description": "Bài 8.2 — ownership: users edit only their own notes, admin bypass (in-memory)",
+  "name": "shop-backend-bai8.2",
+  "version": "4.0.0",
+  "description": "CSC Shop backend — Bài 8.2: Admin authorization (RBAC) + user management + /orders/my",
+  "prisma": { "seed": "ts-node prisma/seed.ts" },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:studio": "prisma studio"
   },
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^5.0.0",
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "yup": "^1.3.3",
     "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2"
   },
@@ -23,6 +29,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "typescript": "^5.1.6",
     "ts-node": "^10.9.1",
-    "ts-node-dev": "^2.0.0"
+    "ts-node-dev": "^2.0.0",
+    "prisma": "^5.0.0"
   }
 }

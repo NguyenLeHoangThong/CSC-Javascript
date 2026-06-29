@@ -1,57 +1,61 @@
 -- ============================================================
--- Bài 4.1 — Library queries. Run schema.sql first.
+-- Bài 4.1 — Library queries. Run schema.sql first, then each query one by one.
 -- ============================================================
 
--- Q1: Every book with its author name (LEFT JOIN keeps the orphan book)
-SELECT b.title, b.published, a.name AS author
-FROM books b
-LEFT JOIN authors a ON a.id = b.author_id
-ORDER BY b.title;
+-- 1. Sách kèm tên tác giả (JOIN)
+SELECT b.title, a.full_name AS author, b.genre, b.available_copies
+FROM   books b
+JOIN   authors a ON b.author_id = a.id
+ORDER  BY b.title;
 
--- Q2: Books published in 2015 or later (WHERE + ORDER BY)
-SELECT title, published, copies
-FROM books
-WHERE published >= 2015
-ORDER BY published DESC;
+-- 2. Sách đang được mượn (available < total)
+SELECT b.title, b.total_copies, b.available_copies,
+       b.total_copies - b.available_copies AS borrowed_count
+FROM   books b
+WHERE  b.available_copies < b.total_copies;
 
--- Q3: Number of books per author (GROUP BY + COUNT)
-SELECT a.name, COUNT(b.id) AS book_count
-FROM authors a
+-- 3. Tác giả có nhiều đầu sách nhất (LEFT JOIN + GROUP BY + LIMIT)
+SELECT a.full_name, COUNT(b.id) AS total_books
+FROM   authors a
 LEFT JOIN books b ON b.author_id = a.id
-GROUP BY a.id, a.name
-ORDER BY book_count DESC;
+GROUP  BY a.id, a.full_name
+ORDER  BY total_books DESC
+LIMIT  1;
 
--- Q4: Loans not yet returned (IS NULL)
-SELECT l.id, b.title, l.borrower, l.due_on, l.loan_days
-FROM loans l
-JOIN books b ON b.id = l.book_id
-WHERE l.returned_on IS NULL
-ORDER BY l.due_on;
+-- 4. Lượt mượn theo tháng (GROUP BY DATE_TRUNC)
+SELECT DATE_TRUNC('month', borrowed_at) AS month, COUNT(*) AS total
+FROM   borrows
+GROUP  BY DATE_TRUNC('month', borrowed_at)
+ORDER  BY month DESC;
 
--- Q5: Books returned LATE (returned_on > due_on)
-SELECT b.title, l.borrower, l.due_on, l.returned_on
-FROM loans l
-JOIN books b ON b.id = l.book_id
-WHERE l.returned_on IS NOT NULL AND l.returned_on > l.due_on;
+-- 5. Sách chưa từng được mượn (LEFT JOIN + IS NULL)
+SELECT b.title, a.full_name AS author
+FROM   books   b
+JOIN   authors a ON b.author_id = a.id
+LEFT JOIN borrows br ON br.book_id = b.id
+WHERE  br.id IS NULL;
 
--- Q6: Most borrowed books (GROUP BY + COUNT + LIMIT)
-SELECT b.title, COUNT(l.id) AS times_borrowed
-FROM books b
-JOIN loans l ON l.book_id = b.id
-GROUP BY b.id, b.title
-ORDER BY times_borrowed DESC
-LIMIT 3;
+-- 6. Tỉ lệ mượn của từng sách — dùng ::FLOAT để tránh integer division
+SELECT b.title,
+       b.total_copies,
+       b.available_copies,
+       ROUND(
+         ((b.total_copies - b.available_copies)::FLOAT / b.total_copies * 100)::NUMERIC, 1
+       ) AS borrow_rate_pct
+FROM   books b
+WHERE  b.total_copies > 0
+ORDER  BY borrow_rate_pct DESC;
 
--- Q7: Authors with more than 1 book (HAVING)
-SELECT a.name, COUNT(b.id) AS book_count
-FROM authors a
-JOIN books b ON b.author_id = a.id
-GROUP BY a.id, a.name
-HAVING COUNT(b.id) > 1;
+-- 7. Phiếu mượn chưa trả (IS NULL trên returned_at)
+SELECT br.id, b.title, br.borrower_name, br.due_date, br.status
+FROM   borrows br
+JOIN   books b ON b.id = br.book_id
+WHERE  br.returned_at IS NULL
+ORDER  BY br.due_date;
 
--- Q8: Books that were never borrowed (LEFT JOIN + IS NULL)
-SELECT b.title
-FROM books b
-LEFT JOIN loans l ON l.book_id = b.id
-WHERE l.id IS NULL
-ORDER BY b.title;
+-- 8. Người mượn nhiều nhất (GROUP BY + HAVING)
+SELECT borrower_name, borrower_email, COUNT(*) AS borrow_count
+FROM   borrows
+GROUP  BY borrower_name, borrower_email
+HAVING COUNT(*) >= 2
+ORDER  BY borrow_count DESC;

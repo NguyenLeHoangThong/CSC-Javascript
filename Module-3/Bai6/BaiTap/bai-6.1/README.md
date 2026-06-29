@@ -1,31 +1,45 @@
-# Bài 6.1 — Blog pagination / filter / search / sort
+# Bài 6.1 — API Quản lý Nhân viên (Prisma, production-ready)
 
-Bài lẻ luyện **phân trang + lọc + tìm kiếm + sắp xếp** ngay trong DB bằng Prisma.
+**Bài tập độc lập** của Bài 6. Luyện middleware validate query, transaction khi xóa, và thống kê
+bằng `groupBy`.
 
-## Chạy
+## 🎯 Kiến thức
+- `validateQuery` (Yup) cho `GET /employees`: tự cast `"1"` → `1`, áp default
+- `validateId` → lưu `res.locals.id`, handler không tự `parseInt` lại
+- `buildMeta` (kèm `hasNext`/`hasPrev`) dùng chung cho list response
+- Transaction xóa department: còn nhân viên → 409 (tự rollback)
+- `GET /stats`: `count` + `aggregate` (avg/min/max salary) + `groupBy(departmentId)`
+
+## 🚀 Chạy
 ```bash
 npm install
 cp .env.example .env
 npm run prisma:migrate -- --name init
-npm run prisma:seed          # 25 bài post
-npm run dev                  # http://localhost:3001
+npm run prisma:seed
+npm run dev                  # http://localhost:3000
 ```
 
-## Endpoint
-`GET /posts?search=&published=&sort=views&order=desc&page=1&limit=10`
+## 📡 Endpoints (`/api/v1`)
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| GET | `/employees?departmentId=&status=&search=&sort=&order=&page=&limit=` | list + filter + sort + paginate |
+| GET | `/employees/:id` | chi tiết (kèm department) |
+| POST | `/employees` | tạo |
+| PATCH | `/employees/:id` | cập nhật |
+| DELETE | `/employees/:id` | xóa |
+| GET | `/employees/stats` | thống kê (count/aggregate/groupBy) |
+| GET | `/departments` | list (kèm `_count.employees`) |
+| POST | `/departments` | tạo |
+| DELETE | `/departments/:id` | chặn nếu còn nhân viên → 409 |
 
-Trả về:
-```json
-{ "data": [...], "meta": { "total": 25, "page": 1, "limit": 10, "pages": 3, "hasNext": true, "hasPrev": false } }
-```
+Filter `sort` ∈ `fullName|salary|startDate`, `order` ∈ `asc|desc`.
 
-## Thử
+## ✅ Tự kiểm tra
 ```bash
-curl "localhost:3001/posts?published=true&sort=views&order=desc&page=2&limit=5"
-curl "localhost:3001/posts?search=number%201"
+curl "localhost:3000/api/v1/employees?sort=salary&order=desc&status=active"
+curl localhost:3000/api/v1/employees/stats
+curl -X DELETE localhost:3000/api/v1/departments/1   # còn nhân viên → 409
 ```
 
-## Ghi chú
-- `skip = (page-1)*limit`, `take = limit` → phân trang.
-- `where` ghép động: chỉ thêm điều kiện khi filter có giá trị.
-- `$transaction([findMany, count])` lấy data + tổng số trong 1 lần.
+## ➡️ Buổi sau
+Bài 6.2 — thêm **Order API** vào shop-backend với transaction (kiểm tra + trừ stock).

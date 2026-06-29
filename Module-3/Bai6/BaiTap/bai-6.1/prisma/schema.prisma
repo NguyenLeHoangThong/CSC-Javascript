@@ -1,4 +1,4 @@
-// Bài 6.1 — Blog posts for practising pagination / filter / search / sort.
+// Bài 6.1 — Employee management. Practise validateQuery, transactional delete, groupBy stats.
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,13 +8,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String   @db.VarChar(200)
-  content   String
-  published Boolean  @default(false)
-  views     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
+enum EmployeeStatus {
+  active
+  inactive
+  resigned
+}
 
-  @@map("posts")
+model Department {
+  id        Int        @id @default(autoincrement())
+  name      String     @db.VarChar(100)
+  code      String     @unique @db.VarChar(20)
+  createdAt DateTime   @default(now()) @map("created_at")
+  employees Employee[]
+
+  @@map("departments")
+}
+
+model Employee {
+  id           Int            @id @default(autoincrement())
+  fullName     String         @map("full_name") @db.VarChar(100)
+  email        String         @unique @db.VarChar(150)
+  phone        String?        @db.VarChar(15)
+  departmentId Int?           @map("department_id")
+  position     String         @db.VarChar(100)
+  salary       Decimal        @db.Decimal(15, 2)
+  startDate    DateTime       @map("start_date")
+  status       EmployeeStatus @default(active)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  @@map("employees")
 }
