@@ -1,0 +1,81 @@
+# Bài 40 — Continuous Integration.
+#
+# ⚠️ GitHub only runs workflows found in `.github/` at the ROOT of a repository.
+# This file lives inside the project folder because the course repo holds several
+# modules. When csc-shop-api is pushed as its own repo it works unchanged; to run it
+# from the course repo, move `.github/` to the repo root and add
+# `working-directory: Module-4/csc-shop-api` to the steps.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege: this workflow only reads the code. Without this line the token
+# gets the repository default, which is usually write.
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the previous run instead of queueing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    name: Type-check, test & build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # Caches ~/.npm keyed on package-lock.json — turns a ~40s install into ~5s.
+          cache: npm
+
+      # `ci` (not `install`) installs exactly the locked versions and fails if
+      # package.json and package-lock.json disagree.
+      - name: Install dependencies
+        run: npm ci
+
+      # Prisma Client is generated code. Without this step every `import { Prisma }`
+      # is a type error. No database is needed — `generate` only reads the schema.
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Build & scan Docker image
+    runs-on: ubuntu-latest
+    needs: test-and-build # no point building an image from code that fails its tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        # Built locally only (`load: true`, no push) so the scan below can read it.
+        run: docker build -t csc-shop-api:${{ github.sha }} .
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: csc-shop-api:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true # do not fail on CVEs with no patch available yet
+          exit-code: "1" # a CRITICAL/HIGH CVE fails the build

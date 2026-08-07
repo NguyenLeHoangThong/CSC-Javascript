@@ -1,0 +1,58 @@
+# Bài 40 — one command to get Postgres + the API running locally:
+#
+#   docker compose up -d --build
+#   docker compose exec backend npx prisma db push
+#   docker compose exec backend npx prisma db seed
+#   curl http://localhost:3000/health
+#
+# `version:` is intentionally absent — it is obsolete in Compose v2.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: csc-shop-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: csc_shop_db
+    ports:
+      # Exposed so you can still point Prisma Studio / psql at it from the host.
+      - "5432:5432"
+    volumes:
+      # Named volume = the data survives `docker compose down`.
+      # (`down -v` is what actually deletes it.)
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Without this, `depends_on` would only wait for the CONTAINER to start, not for
+      # Postgres to accept connections — and the API would crash-loop on first boot.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d csc_shop_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: csc-shop-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy # wait for the healthcheck above, not just for startup
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # HOSTNAME IS `db`, NOT `localhost`. Inside the compose network each service is
+      # reachable by its service name; `localhost` here would mean this container.
+      DATABASE_URL: postgresql://postgres:password@db:5432/csc_shop_db
+      CORS_ORIGINS: http://localhost:5173
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_secret_change_me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me}
+      # Read from your shell / .env — never hardcode a real key in this file.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

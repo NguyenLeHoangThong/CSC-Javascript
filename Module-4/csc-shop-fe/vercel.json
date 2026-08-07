@@ -1,0 +1,32 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+
+  "// rewrites": "This is THE thing that breaks first on an SPA deploy. React Router owns /cart, /admin/products, ... but those paths do not exist as files on disk: a hard refresh or a shared link would 404. Send every unmatched request to index.html and let the router resolve it in the browser.",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+
+  "headers": [
+    {
+      "// comment": "Vite fingerprints every asset (index-a1b2c3.js), so an asset URL never changes content. Cache it forever; a new deploy produces new URLs.",
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "// comment": "index.html must NOT be cached, otherwise browsers keep loading the old asset URLs after a deploy.",
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "// comment": "Bài 36 — the same hardening helmet applies on the API, applied to the static site.",
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" }
+      ]
+    }
+  ]
+}

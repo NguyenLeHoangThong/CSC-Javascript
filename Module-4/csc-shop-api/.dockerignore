@@ -1,0 +1,42 @@
+# Bài 40 — everything listed here is excluded from the build context.
+#
+# Two reasons this file matters:
+#   1. Speed — without it Docker uploads the whole node_modules/ to the daemon.
+#   2. Security — `.env` holds real secrets; COPY . . would bake them into a layer
+#      that anyone who pulls the image can read back.
+
+# Dependencies & build output (rebuilt inside the image)
+node_modules/
+dist/
+
+# Secrets — NEVER in an image
+.env
+.env.*
+!.env.example
+
+# Git & CI
+.git/
+.github/
+.gitignore
+
+# Tests and test config (production image does not run them)
+**/__tests__/
+**/*.test.ts
+vitest.config.mts
+tsconfig.check.json
+
+# Dev-only tooling
+scripts/
+
+# Docs & editor noise
+README.md
+*.md
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+docker-compose.yml

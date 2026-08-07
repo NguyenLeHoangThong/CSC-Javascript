@@ -1,0 +1,57 @@
+# Bài 40 — Continuous Deployment.
+#
+# Deploy is a SEPARATE workflow from CI so that a pull request runs the checks
+# without ever touching production.
+#
+# Setup required once, outside the code:
+#   Render Dashboard -> Web Service -> Settings -> Deploy Hook -> copy the URL
+#   GitHub repo -> Settings -> Secrets and variables -> Actions -> New secret
+#     name: RENDER_DEPLOY_HOOK
+
+name: CD
+
+on:
+  push:
+    branches: [main] # merges to main only — never on a pull request
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: Verify before deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    name: Trigger Render deploy
+    runs-on: ubuntu-latest
+    needs: test-and-build # `needs` is the gate: broken code never reaches production
+    # Belt and braces — `on.push.branches` already filters, but this makes the
+    # intent explicit for anyone adding another trigger later.
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Call the Render deploy hook
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          # Fail loudly if the secret was never configured, instead of curling "".
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK secret is not set"
+            exit 1
+          fi
+          # --fail turns an HTTP 4xx/5xx into a non-zero exit code, so a rejected
+          # hook shows up as a red build instead of a green lie.
+          curl --fail --silent --show-error -X POST "$DEPLOY_HOOK"
+          echo "✅ Deploy triggered"

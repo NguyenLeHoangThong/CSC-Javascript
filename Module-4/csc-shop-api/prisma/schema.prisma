@@ -1,0 +1,145 @@
+// Prisma schema for the CSC Shop API — Module 4.
+//
+// Module 3 left us with User / Category / Product / Order / OrderItem.
+// Module 4 adds:
+//   - ProductReview            (Bài 35 — new feature next to the AI service)
+//   - indexes on hot columns   (Bài 37 — every field we filter or sort by)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  customer
+  admin
+}
+
+enum OrderStatus {
+  pending
+  paid
+  shipped
+  completed
+  cancelled
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(150)
+  password     String // bcrypt hash — never store plain text
+  role         Role     @default(customer)
+  refreshToken String?  @map("refresh_token") // current refresh token; cleared on logout
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  orders  Order[]
+  reviews ProductReview[]
+
+  @@map("users")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(100)
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  slug        String   @unique @db.VarChar(220)
+  description String   @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  thumbnail   String   @db.VarChar(500)
+  brand       String?  @db.VarChar(100)
+  stock       Int      @default(0)
+  rating      Decimal  @default(0) @db.Decimal(2, 1)
+  ratingCount Int      @default(0) @map("rating_count")
+  categoryId  Int      @map("category_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category   Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems OrderItem[]
+  reviews    ProductReview[]
+
+  // Bài 37 — indexes on the columns the product list actually filters/sorts by.
+  // Without them Postgres does a sequential scan on every GET /products.
+  @@index([categoryId]) // WHERE category.slug = ... joins through here
+  @@index([stock]) // the AI service filters stock > 0
+  @@index([price]) // sortBy=price
+  @@index([createdAt]) // sortBy=createdAt (the default)
+  @@map("products")
+}
+
+// Bài 35 — customer reviews. One review per user per product, enforced by the DB
+// (@@unique) rather than by a read-then-write check that would race under load.
+model ProductReview {
+  id        Int      @id @default(autoincrement())
+  rating    Int // 1..5, validated by reviewSchema before it gets here
+  comment   String?  @db.VarChar(500)
+  productId Int      @map("product_id")
+  userId    Int      @map("user_id")
+  isVisible Boolean  @default(true) @map("is_visible") // admins can hide abusive reviews
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId]) // -> Prisma P2002 -> 409 "already reviewed"
+  @@index([productId, isVisible]) // the public review list reads exactly this pair
+  @@map("product_reviews")
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  userId       Int?        @map("user_id")
+  customerName String      @map("customer_name") @db.VarChar(100)
+  email        String      @db.VarChar(150)
+  phone        String      @db.VarChar(20)
+  address      String      @db.VarChar(255)
+  provinceCode String?     @map("province_code") @db.VarChar(20)
+  wardCode     String?     @map("ward_code") @db.VarChar(20)
+  note         String?     @db.VarChar(300)
+  deliveryDate DateTime?   @map("delivery_date")
+  totalAmount  Decimal     @map("total_amount") @db.Decimal(12, 2)
+  status       OrderStatus @default(pending)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  user  User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items OrderItem[]
+
+  // Bài 37 — "my orders" filters by userId, the admin list filters by status,
+  // and both sort by createdAt.
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  productId Int     @map("product_id")
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}

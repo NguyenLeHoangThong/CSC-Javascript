@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    // vite.config.ts reads `process.env.ANALYZE` (Bài 37) — that is Node code,
+    // not browser code, so it needs the Node globals.
+    "types": ["node"]
+  },
+  // vitest.config.ts is config too, and it must be type-checked by `npm run build`.
+  "include": ["vite.config.ts", "vitest.config.ts"]
+}

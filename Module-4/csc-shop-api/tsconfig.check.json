@@ -1,0 +1,15 @@
+{
+  // `tsconfig.json` is the BUILD config: rootDir=src so dist/ mirrors src/ exactly.
+  // That means `tsc` never looks at prisma/seed.ts, scripts/ or the test files —
+  // a type error there would only show up at runtime.
+  //
+  // This config type-checks everything (no emit), and is what `npm run typecheck`
+  // and CI use.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*", "scripts/**/*", "prisma/**/*", "vitest.config.mts"],
+  "exclude": ["node_modules", "dist"]
+}
