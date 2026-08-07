@@ -16,7 +16,7 @@ một file CLAUDE.md mô tả sai còn tệ hơn không có.
 | Form | react-hook-form + yup qua `@hookform/resolvers` |
 | HTTP | axios, tập trung ở `src/api/axiosClient.ts` |
 | State | React Context (`CartProvider`, `AuthContext`) — **không** dùng Redux/Zustand |
-| Test | Vitest + @testing-library/react (jsdom) |
+| Test | Vitest + @testing-library/react (jsdom) · Playwright (E2E, Chromium) |
 
 Backend đi kèm: `../csc-shop-api` (Express + Prisma + PostgreSQL).
 
@@ -67,7 +67,23 @@ Dùng `useFetch<T>()` (`src/hooks/useFetch.ts`) thay vì tự viết lại
 `useState + useEffect + try/catch`. Nếu buộc phải viết tay thì vẫn phải abort khi
 unmount, nếu không response cũ sẽ ghi đè response mới.
 
-### 6. Feature gọi AI phải render đủ 3 trạng thái
+### 6. Nút chỉ có icon PHẢI có `aria-label`; `<Select>` phải nối với `<InputLabel>`
+
+```tsx
+<IconButton onClick={...}>            {/* ❌ screen reader chỉ đọc "button" */}
+<IconButton aria-label="Giỏ hàng">    {/* ✅ */}
+
+<InputLabel>Danh mục</InputLabel>                          {/* ❌ combobox vô danh */}
+<Select label="Danh mục" ...>
+
+<InputLabel id="category-label">Danh mục</InputLabel>      {/* ✅ */}
+<Select labelId="category-label" label="Danh mục" ...>
+```
+
+Không chỉ là chuyện a11y: E2E tìm phần tử bằng `getByRole`/`getByLabel`, nên thiếu tên
+khả truy cập là test phải bám vào thứ tự DOM và trở nên flaky.
+
+### 7. Feature gọi AI phải render đủ 3 trạng thái
 
 `loading` / `error` / `success`. Gọi LLM chậm (~1–3s) và fail thường xuyên hơn API
 thường (rate limit, hết quota, timeout) — thiếu nhánh error là bug chắc chắn xảy ra,
@@ -91,6 +107,11 @@ src/
 ├── services/       # gọi api/ rồi map về type của UI
 ├── test/           # setup.ts cho vitest
 └── types/          # type dùng chung
+
+e2e/                # Playwright — KHÔNG import gì từ src/ ngoài type
+├── fixtures/       # test-fixtures.ts: customerPage/adminPage, mock API bên thứ ba
+├── pages/          # Page Object Model
+└── specs/          # home / auth / shopping / admin / ai-suggest / security
 ```
 
 **Quy ước đặt tên**: file component/page dùng `PascalCase.tsx`, mọi thứ khác dùng
@@ -103,15 +124,35 @@ src/
 ```bash
 npm run dev             # http://localhost:5173
 npm run build           # tsc -b && vite build  (PHẢI pass trước khi commit)
-npm test                # vitest run
+npm run test:unit       # vitest run
+npm run test:e2e        # playwright (tự khởi động cả backend lẫn frontend)
+npm run test:e2e:ui     # UI mode để debug test đỏ
 npm run build:analyze   # dist/stats.html — treemap của bundle
 ```
 
 ---
 
+## Viết E2E (`e2e/`)
+
+- Selector: `getByRole` / `getByLabel` / `getByPlaceholder`. **Không** dùng class CSS,
+  trừ badge của MUI (không có role nào) — và khi đó phải scope trong một locator có role.
+- **Không** `waitForTimeout()`. Dùng auto-waiting của `expect()`, `waitForResponse()`,
+  hoặc `expect.poll()`.
+- Selector của component phức tạp (MUI Select, DatePicker) sống trong `e2e/pages/*.ts`,
+  không rải trong spec.
+- Đăng nhập trong test: dùng fixture `customerPage` / `adminPage` (đăng nhập qua API),
+  đừng điền lại form login ở mỗi test.
+- Mỗi test tự tạo dữ liệu riêng có timestamp — chạy song song và chạy lại nhiều lần
+  đều phải xanh.
+- Mock mọi thứ NGOÀI hệ thống của mình (API tỉnh/thành, Gemini). **Không** mock API của
+  chính mình, trừ khi đang test riêng một trạng thái lỗi khó tái tạo.
+
 ## Khi thêm code mới
 
 - Trang admin mới → thêm vào `router/index.tsx` bằng `lazy()` + `lazyAdminRoute()`.
 - Endpoint mới → thêm hàm vào `src/api/<name>Api.ts`, đừng gọi URL rải rác trong page.
+  **Kiểm tra tên field khớp schema Yup của backend** — đây là nguồn lỗi số 1 của dự án này.
 - Component có logic điều kiện (badge, disable, empty state) → viết test cho **cả hai
   nhánh**, không chỉ nhánh happy path.
+- Luồng người dùng thật đi qua (mua hàng, đăng nhập, CRUD admin) → thêm E2E, vì unit
+  test không bao giờ bắt được lỗi FE/BE lệch nhau.

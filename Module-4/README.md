@@ -65,10 +65,13 @@ curl http://localhost:3000/health     # {"status":"ok","database":"connected",..
 |---|---|
 | `csc-shop-api` → `npm run typecheck` | ✅ pass (gồm cả `scripts/`, `prisma/`) |
 | `csc-shop-api` → `npm run build` | ✅ pass |
-| `csc-shop-api` → `npm test` | ✅ **33 test** pass (4 file) |
+| `csc-shop-api` → `npm test` | ✅ **33 unit test** pass (4 file) |
 | `csc-shop-fe` → `npm run build` | ✅ pass (`tsc -b && vite build`) |
-| `csc-shop-fe` → `npm test` | ✅ **18 test** pass (3 file) |
+| `csc-shop-fe` → `npm run test:unit` | ✅ **18 unit test** pass (3 file) |
+| `csc-shop-fe` → `npm run test:e2e` | ✅ **64 E2E test** pass (6 file) — Chromium thật + API thật + PostgreSQL thật, xanh qua nhiều lần chạy liên tiếp |
 | `docker build` / `docker compose up` | ⚠️ **chưa chạy thử** — Docker Desktop không bật trên máy khi implement. Cần tự verify (xem lệnh ở trên). |
+
+**Tổng: 115 test tự động** (51 unit + 64 E2E).
 
 Việc **không** làm được bằng code, phải tự tay làm trên dashboard: tạo tài khoản
 Vercel/Render, set environment variable, lấy Deploy Hook, thêm GitHub Secret. Xem mục
@@ -81,7 +84,11 @@ Bài 38/39/40 bên dưới.
 > Mục tiêu: tìm code "viết ẩu" có thật trong dự án và sửa, chứ không phải tự tạo code
 > xấu rồi sửa lại.
 
-Module 3 để lại **6 lỗi thật**, tất cả đều thuộc loại "chạy được trên máy mình":
+Module 3 để lại **13 lỗi thật**, tất cả đều thuộc loại "chạy được trên máy mình".
+6 lỗi đầu tìm được khi đọc code; 7 lỗi còn lại chỉ lộ ra khi **E2E chạy app thật**
+(xem mục [Bài 32+ — E2E](#bài-32-mở-rộng--e2e-với-playwright) ở cuối).
+
+### Nhóm A — tìm được khi đọc code
 
 | # | Vấn đề ở Module 3 | Hậu quả | File sửa |
 |---|---|---|---|
@@ -91,6 +98,32 @@ Module 3 để lại **6 lỗi thật**, tất cả đều thuộc loại "chạ
 | 4 | FE gọi `GET /orders/my` | BE chỉ có `/orders/me` → Express match vào `/:id` → 400 | [csc-shop-fe/src/api/orderApi.ts](csc-shop-fe/src/api/orderApi.ts) |
 | 5 | FE dùng status `confirmed/shipping/delivered` | BE enum là `pending/paid/shipped/completed/cancelled` → đổi status luôn 400 | [csc-shop-fe/src/pages/admin/AdminOrdersPage.tsx](csc-shop-fe/src/pages/admin/AdminOrdersPage.tsx), [csc-shop-fe/src/pages/MyOrdersPage.tsx](csc-shop-fe/src/pages/MyOrdersPage.tsx) |
 | 6 | FE dùng role `"user"` | BE enum là `customer` → đổi vai trò luôn 400 | [csc-shop-fe/src/context/AuthContext.tsx](csc-shop-fe/src/context/AuthContext.tsx), [csc-shop-fe/src/pages/admin/AdminUsersPage.tsx](csc-shop-fe/src/pages/admin/AdminUsersPage.tsx) |
+
+### Nhóm B — chỉ E2E mới bắt được
+
+Điểm chung của cả 7 lỗi: **FE và BE mỗi bên tự nó đều đúng**, chỉ sai khi ghép lại.
+Unit test mock đầu bên kia nên vĩnh viễn xanh.
+
+| # | Vấn đề | Hậu quả | File sửa |
+|---|---|---|---|
+| 7 | Checkout gửi `userName/userEmail/userPhone` + item kèm `title/price/thumbnail` | BE cần `customerName/email/phone` + item `{productId, quantity}` → **mọi lần đặt hàng đều 400** | [CheckoutPage.tsx](csc-shop-fe/src/pages/CheckoutPage.tsx), [types/order.ts](csc-shop-fe/src/types/order.ts) |
+| 8 | `authApi.register` không gửi `confirmPassword` | BE `registerSchema` bắt buộc → **không ai đăng ký được** | [api/authApi.ts](csc-shop-fe/src/api/authApi.ts), [RegisterPage.tsx](csc-shop-fe/src/pages/RegisterPage.tsx) |
+| 9 | Admin sản phẩm gửi `category` (slug) | BE cần `categoryId` (số) → tạo/sửa sản phẩm luôn 400, **lỗi bị nuốt im lặng**, dialog vẫn đóng như đã lưu | [AdminProductsPage.tsx](csc-shop-fe/src/pages/admin/AdminProductsPage.tsx) |
+| 10 | Admin đơn hàng đọc `o.userName` | BE trả `customerName` → cột "Khách" trống trơn | [AdminOrdersPage.tsx](csc-shop-fe/src/pages/admin/AdminOrdersPage.tsx) |
+| 11 | "Đơn hàng của tôi" đọc `item.title` | BE `include` product → phải là `item.product.title` → tên sản phẩm trống | [MyOrdersPage.tsx](csc-shop-fe/src/pages/MyOrdersPage.tsx) |
+| 12 | Đặt hàng xong, `CLEAR_CART` làm `cartItems.length === 0` → nhánh "giỏ trống" render trước, unmount luôn Snackbar | Khách vừa mua xong **thấy "Chưa có sản phẩm trong giỏ"**, không hề có xác nhận | [CheckoutPage.tsx](csc-shop-fe/src/pages/CheckoutPage.tsx) — thêm màn hình thành công |
+| 13 | `npm run prisma:seed` chạy `ts-node` thẳng, không nạp `.env` | Seed chết với "Environment variable not found: DATABASE_URL" (chỉ `npx prisma db seed` mới tự nạp) | [prisma/seed.ts](csc-shop-api/prisma/seed.ts) — thêm `import "dotenv/config"` |
+
+Ngoài ra E2E buộc phải sửa 2 vấn đề **accessibility** có thật (Playwright ưu tiên
+`getByRole`/`getByLabel` — đúng thứ screen reader dùng, nên "test không tìm thấy phần tử"
+thường là dấu hiệu người khiếm thị cũng không tìm thấy):
+
+- `<InputLabel>` không nối với `<Select>` → combobox **không có tên khả truy cập**.
+  Thêm `id` + `labelId`: [HomePage.tsx](csc-shop-fe/src/pages/HomePage.tsx),
+  [CheckoutPage.tsx](csc-shop-fe/src/pages/CheckoutPage.tsx).
+- IconButton chỉ có icon (giỏ hàng, avatar, đổi theme) **không có `aria-label`** → screen
+  reader chỉ đọc "button": [Header.tsx](csc-shop-fe/src/components/layout/Header.tsx),
+  [ThemeToggle.tsx](csc-shop-fe/src/components/common/ThemeToggle.tsx).
 
 Refactor thêm:
 
@@ -142,6 +175,85 @@ mọi `import` — khai báo `const prismaMock = {...}` thường sẽ lỗi
 | [csc-shop-fe/src/test/setup.ts](csc-shop-fe/src/test/setup.ts) | jest-dom matchers, `cleanup()`, stub `window.matchMedia` (jsdom không có, MUI thì gọi) |
 | [src/components/product/\_\_tests\_\_/ProductCard.test.tsx](csc-shop-fe/src/components/product/__tests__/ProductCard.test.tsx) | render đúng data, link đúng, **cả 2 nhánh** còn hàng / hết hàng, thiếu `stock` → coi như hết hàng, thêm vào giỏ, wishlist |
 | [src/hooks/\_\_tests\_\_/useDebounce.test.ts](csc-shop-fe/src/hooks/__tests__/useDebounce.test.ts) | fake timers: gõ 5 phím chỉ emit 1 giá trị cuối |
+
+---
+
+# Bài 32 (mở rộng) — E2E với Playwright
+
+> Unit test mock đầu bên kia nên FE và BE có thể **cùng xanh mà vẫn không nói chuyện
+> được với nhau**. E2E chạy Chromium thật trên frontend thật + backend thật +
+> PostgreSQL thật, và đó là lý do nó tìm ra 7 lỗi tích hợp mà 51 unit test bỏ sót.
+
+### Cấu trúc
+
+```
+csc-shop-fe/
+├── playwright.config.ts     # 1 lệnh khởi động CẢ backend lẫn frontend rồi chờ /health
+├── tsconfig.e2e.json        # e2e cần cả types Node lẫn lib DOM
+└── e2e/
+    ├── fixtures/
+    │   └── test-fixtures.ts # customerPage / adminPage đăng nhập sẵn, mock API tỉnh/thành
+    ├── pages/               # Page Object Model
+    │   ├── HomePage.ts  LoginPage.ts  CartPage.ts
+    │   ├── CheckoutPage.ts  MyOrdersPage.ts  AdminProductsPage.ts
+    └── specs/
+        ├── home.spec.ts        (7)  — smoke, tìm kiếm, debounce, lọc danh mục
+        ├── auth.spec.ts       (15)  — đăng nhập/ký, phiên, phân quyền route
+        ├── shopping.spec.ts   (10)  — giỏ hàng + thanh toán end-to-end
+        ├── admin.spec.ts       (6)  — CRUD sản phẩm, đổi trạng thái đơn, quản lý user
+        ├── ai-suggest.spec.ts (10)  — 3 trạng thái của widget AI
+        └── security.spec.ts   (16)  — header, phân quyền, validate, cache trên HTTP thật
+```
+
+### Chạy
+
+```bash
+cd csc-shop-fe
+npx playwright install chromium     # một lần
+
+npm run test:e2e            # headless, song song
+npm run test:e2e:headed     # xem trình duyệt chạy
+npm run test:e2e:ui         # UI mode — tua lại từng bước, xem DOM snapshot
+npm run test:e2e:report     # mở report HTML của lần chạy trước
+```
+
+Playwright **tự khởi động** backend + frontend, không cần mở sẵn terminal nào. Chỉ cần
+PostgreSQL đang chạy và đã `npm run prisma:push && npm run prisma:seed`.
+
+### Những quyết định đáng chú ý
+
+| Quyết định | Lý do |
+|---|---|
+| `getByRole` / `getByLabel`, gần như không dùng class CSS | Đó là thứ người dùng thật và screen reader thấy. Đổi style không được làm đỏ test — mà nếu test không tìm ra phần tử thì thường **đúng là lỗi a11y** (xem Bài 31 nhóm B) |
+| Page Object Model | Selector của MUI DatePicker/Select nằm ở **một** chỗ. Khi MUI đổi cấu trúc, sửa 1 file thay vì 10 spec |
+| Đăng nhập qua **API** trong fixture, không qua UI | Nhanh hơn ~2s mỗi test, và login hỏng không làm 20 test đỏ cùng lúc che mất lỗi thật. Luồng login qua UI vẫn có test riêng |
+| Mock `provinces.open-api.vn` | API bên thứ ba down là suite đỏ dù code mình đúng |
+| Mock `/ai/suggest` ở hầu hết test AI | Gọi Gemini thật thì chậm, tốn quota, và trả chữ khác nhau mỗi lần nên không assert nổi. Cái đang test là **hành vi UI trước từng loại phản hồi** |
+| Nhưng có **1 test cố tình KHÔNG mock** | Xác nhận đường dây thật FE→BE: server chưa có key thì trả 503 kèm message tử tế, UI không kẹt ở "Đang nghĩ" |
+| `RATE_LIMIT_*` đọc từ env | E2E bắn hàng trăm request từ 1 IP trong ~2 phút, sẽ đụng trần `generalLimiter` giữa chừng và trông như app hỏng. Mặc định production vẫn 100/10/10 |
+| Không có test nào cố tình lĩnh 429 | Sẽ khoá IP 15 phút và làm đỏ mọi spec sau đó. Thay vào đó assert **header `RateLimit-*` có mặt** — chứng minh limiter đã mount mà không đốt hạn mức |
+| `retries: 0` ở local, `2` trên CI | Local phải để test flaky lộ ra ngay; CI thì nhiễu hơn thật |
+| Mỗi test tự tạo dữ liệu riêng (timestamp) | Chạy song song không giẫm chân nhau, và chạy lại lần 2, lần 3 vẫn xanh |
+
+### Hai cái bẫy của MUI mà E2E dạy được
+
+```ts
+// ❌ MUI X DatePicker KHÔNG phải <input>: nó là role="group" gồm 3 section
+//    contenteditable + 1 input ẩn -> getByLabel khớp 2 phần tử, .fill() vô tác dụng
+await page.getByLabel("Ngày giao").fill("08/08/2026");
+
+// ✅ Click đúng section đầu rồi gõ số; field tự nhảy sang section kế
+await group.getByRole("spinbutton", { name: "Month" }).click();
+await page.keyboard.type("08082026");
+```
+
+```ts
+// ❌ Phụ thuộc thứ tự DOM — bắt nhầm nút giỏ hàng khi phiên chưa hydrate xong
+await page.locator("header").getByRole("button").last().click();
+
+// ✅ Có aria-label rồi thì Playwright tự chờ đúng nút xuất hiện
+await page.getByRole("button", { name: "Tài khoản" }).click();
+```
 
 ---
 
@@ -365,9 +477,9 @@ Hai chi tiết dễ mất dữ liệu / mất connection:
 | [csc-shop-api/Dockerfile](csc-shop-api/Dockerfile) | multi-stage `builder` → `production`; `npm prune --omit=dev`; chạy bằng user `node` (không root); `HEALTHCHECK`; `CMD ["node","dist/server.js"]` |
 | [csc-shop-api/.dockerignore](csc-shop-api/.dockerignore) | loại `node_modules/`, `dist/`, **`.env`**, test, `.git/` |
 | [csc-shop-api/docker-compose.yml](csc-shop-api/docker-compose.yml) | `db` (postgres:16-alpine + healthcheck `pg_isready` + volume) và `backend` (`depends_on: condition: service_healthy`) |
-| [csc-shop-api/.github/workflows/ci.yml](csc-shop-api/.github/workflows/ci.yml) | `permissions: contents: read` → checkout → setup-node (`cache: npm`) → `npm ci` → `prisma generate` → typecheck → test → build → job Docker + **Trivy** (`CRITICAL,HIGH`, `exit-code: 1`) |
-| [csc-shop-api/.github/workflows/cd.yml](csc-shop-api/.github/workflows/cd.yml) | job `deploy` `needs: test-and-build`, chỉ chạy khi push `main`, `curl --fail` tới `secrets.RENDER_DEPLOY_HOOK` |
-| [csc-shop-api/.github/dependabot.yml](csc-shop-api/.github/dependabot.yml) | `github-actions` + `npm` + `docker`, `interval: weekly`, gom minor/patch vào 1 PR |
+| [.github/workflows/ci.yml](.github/workflows/ci.yml) | 4 job: `backend` (typecheck+test+build) · `frontend` · `e2e` (Playwright, **service container PostgreSQL 16**, `needs: [backend, frontend]`) · `docker` (build + **Trivy** `CRITICAL,HIGH`, `exit-code: 1`). `permissions: contents: read`, `cache: npm`, upload `playwright-report` làm artifact |
+| [.github/workflows/cd.yml](.github/workflows/cd.yml) | job `deploy` `needs: verify`, chỉ chạy khi push `main`, `curl --fail` tới `secrets.RENDER_DEPLOY_HOOK` |
+| [.github/dependabot.yml](.github/dependabot.yml) | `github-actions` + `npm` (một entry cho mỗi package) + `docker`, `interval: weekly`, gom minor/patch vào 1 PR |
 
 Ba cái bẫy kinh điển đều đã xử lý:
 
@@ -384,9 +496,11 @@ sẵn binary prebuilt cho glibc, trên alpine (musl) npm sẽ phải biên dịc
 thêm python3/make/g++ trong image.
 
 > ⚠️ **GitHub chỉ đọc `.github/` ở ROOT của repository.** Repo khoá học này chứa nhiều
-> module nên thư mục `.github/` được đặt trong `csc-shop-api/`. Khi tách backend thành
-> repo riêng thì chạy được ngay; muốn chạy từ repo khoá học thì chuyển `.github/` lên
-> root và thêm `working-directory: Module-4/csc-shop-api` vào các step.
+> module nên `.github/` được đặt ở `Module-4/`. Muốn nó chạy thật: copy `.github/` lên
+> root repo rồi đổi `working-directory` thành `Module-4/csc-shop-api` /
+> `Module-4/csc-shop-fe`. Nó được đặt ở đây thay vì root ngay từ đầu là có chủ ý — thêm
+> workflow vào root sẽ làm MỌI push của repo khoá học chạy CI, và `cd.yml` sẽ đỏ vì
+> chưa có secret.
 
 **Làm tay**: thêm `RENDER_DEPLOY_HOOK` vào GitHub Secrets, và chạy thử
 `docker compose up -d` ở local.
@@ -396,10 +510,13 @@ thêm python3/make/g++ trong image.
 ## Checklist tổng thể
 
 - [x] `npm run build` (cả FE và BE) — không lỗi TypeScript
-- [x] `npm test` (cả FE và BE) — 33 + 18 test pass
+- [x] `npm test` unit (cả FE và BE) — 33 + 18 pass
+- [x] `npm run test:e2e` — 64 pass trên Chromium thật + API thật + PostgreSQL thật,
+      xanh lại khi chạy lần 2 và lần 3 liên tiếp
 - [ ] `docker compose up -d` + `curl /health` — **còn lại cho bạn**: Docker daemon không
       chạy trên máy lúc implement nên `Dockerfile` / `docker-compose.yml` chưa được
       build thử lần nào
 - [x] Không còn `any` ở code mới; `any` cũ trong `errorHandler`/`orderController` đã được thay
 - [x] Không secret nào lọt vào biến `VITE_*` hay bị commit trong `.env`
 - [x] `CLAUDE.md` tồn tại ở cả 2 project và mô tả đúng convention thật sau khi implement
+- [x] 13 lỗi tích hợp từ Module 3 đã sửa, mỗi lỗi có ít nhất 1 test chặn hồi quy

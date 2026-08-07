@@ -10,7 +10,7 @@ import type { Order } from "../../types/order";
 const STATUS_OPTIONS = ["pending", "paid", "shipped", "completed", "cancelled"] as const;
 
 const AdminOrdersPage = () => {
-  const [orders, setOrders] = useState<(Order & { userName: string })[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadOrders = () => orderApi.getAll({ limit: 100 }).then((res) => setOrders(res.data.data));
@@ -35,7 +35,9 @@ const AdminOrdersPage = () => {
           {orders.map((o) => (
             <TableRow key={o.id}>
               <TableCell>{o.id}</TableCell>
-              <TableCell>{o.userName}</TableCell>
+              {/* Bài 31 — backend trả `customerName`; `o.userName` luôn undefined nên
+                  cột "Khách" trước đây trống trơn. */}
+              <TableCell>{o.customerName}</TableCell>
               <TableCell>{Number(o.totalAmount).toLocaleString()}₫</TableCell>
               <TableCell>{new Date(o.createdAt).toLocaleDateString("vi-VN")}</TableCell>
               <TableCell>

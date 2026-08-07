@@ -111,8 +111,8 @@ const HomePage = () => {
         <Grid container spacing={{ xs: 2, md: 3 }} sx={{ alignItems: "center" }}>
           <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth>
-              <InputLabel>Bộ sưu tập</InputLabel>
-              <Select value={collectionType} label="Bộ sưu tập" onChange={(e) => setCollectionType(e.target.value)}>
+              <InputLabel id="collection-label">Bộ sưu tập</InputLabel>
+              <Select value={collectionType} labelId="collection-label" label="Bộ sưu tập" onChange={(e) => setCollectionType(e.target.value)}>
                 <MenuItem value="all">Tất cả sản phẩm</MenuItem>
                 <MenuItem value="wishlist">Chỉ yêu thích</MenuItem>
               </Select>
@@ -120,8 +120,8 @@ const HomePage = () => {
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth>
-              <InputLabel>Danh mục</InputLabel>
-              <Select value={category} label="Danh mục" onChange={(e) => setCategory(e.target.value)}>
+              <InputLabel id="category-label">Danh mục</InputLabel>
+              <Select value={category} labelId="category-label" label="Danh mục" onChange={(e) => setCategory(e.target.value)}>
                 <MenuItem value="all">Tất cả danh mục</MenuItem>
                 {categories.map((c) => (
                   <MenuItem key={c.slug} value={c.slug}>{c.name}</MenuItem>
@@ -131,8 +131,8 @@ const HomePage = () => {
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <FormControl fullWidth>
-              <InputLabel>Sắp xếp</InputLabel>
-              <Select value={sort} label="Sắp xếp" onChange={(e) => setSort(e.target.value as SortOption)}>
+              <InputLabel id="sort-label">Sắp xếp</InputLabel>
+              <Select value={sort} labelId="sort-label" label="Sắp xếp" onChange={(e) => setSort(e.target.value as SortOption)}>
                 <MenuItem value="default">Liên quan</MenuItem>
                 <MenuItem value="priceAsc">Giá thấp → cao</MenuItem>
                 <MenuItem value="priceDesc">Giá cao → thấp</MenuItem>

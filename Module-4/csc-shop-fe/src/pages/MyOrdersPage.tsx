@@ -46,7 +46,8 @@ const MyOrdersPage = () => {
               <Stack spacing={0.5}>
                 {order.items.map((item) => (
                   <Box key={item.id} sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography variant="body2">{item.title} × {item.quantity}</Typography>
+                    {/* Backend include sẵn `product`; `item.title` không tồn tại. */}
+                    <Typography variant="body2">{item.product?.title} × {item.quantity}</Typography>
                     <Typography variant="body2">{(Number(item.price) * item.quantity).toLocaleString()}₫</Typography>
                   </Box>
                 ))}

@@ -115,4 +115,9 @@ npm run ai:review -- src/services/orderService.ts   # AI review 1 file
 - Mock Prisma bằng `vi.hoisted()` + `vi.mock('../../db/prisma', ...)`.
   Dùng `const` thường sẽ lỗi "Cannot access before initialization" vì `vi.mock` bị hoist.
 - Test route dùng Supertest với `app` từ `src/app.ts`.
-- Không test nào được cần database thật hoặc `GEMINI_API_KEY` thật.
+- Không **unit test** nào được cần database thật hoặc `GEMINI_API_KEY` thật.
+- E2E (Playwright) nằm ở `../csc-shop-fe/e2e/` và chạy trên backend + PostgreSQL THẬT.
+  Nó gọi API này trực tiếp để assert phân quyền, header bảo mật và format response —
+  nên đổi status code hay tên field ở đây sẽ làm E2E đỏ. Đó là chủ ý.
+- Trần rate limit đọc từ env (`RATE_LIMIT_GENERAL_MAX` / `_AUTH_MAX` / `_AI_MAX`) để E2E
+  nới được; **mặc định production là 100 / 10 / 10**, đừng đổi giá trị mặc định.

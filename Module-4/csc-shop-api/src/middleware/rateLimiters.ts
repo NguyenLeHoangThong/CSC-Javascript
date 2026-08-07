@@ -20,13 +20,22 @@ const shared: Partial<Options> = {
   legacyHeaders: false, // drop the deprecated X-RateLimit-* headers
 };
 
+// The ceilings are env-configurable so a test run can raise them without editing code.
+// An E2E suite drives hundreds of real requests from ONE IP in a couple of minutes and
+// would otherwise trip `generalLimiter` halfway through — the failure would look like a
+// broken app instead of a throttled test. Defaults stay production-safe.
+function limitFrom(envVar: string, fallback: number): number {
+  const parsed = Number(process.env[envVar]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 // Brute-force protection for credentials. 10 attempts / 15 minutes / IP.
 // `skipSuccessfulRequests` means a legitimate user who logs in fine does not
 // burn through the budget — only failures count.
 export const authLimiter = rateLimit({
   ...shared,
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: limitFrom("RATE_LIMIT_AUTH_MAX", 10),
   skipSuccessfulRequests: true,
   handler: jsonHandler('Too many login attempts. Please try again in 15 minutes.'),
 });
@@ -35,7 +44,7 @@ export const authLimiter = rateLimit({
 export const aiLimiter = rateLimit({
   ...shared,
   windowMs: 60 * 1000,
-  limit: 10,
+  limit: limitFrom('RATE_LIMIT_AI_MAX', 10),
   handler: jsonHandler('Too many AI requests. Please wait a minute.'),
 });
 
@@ -43,6 +52,6 @@ export const aiLimiter = rateLimit({
 export const generalLimiter = rateLimit({
   ...shared,
   windowMs: 60 * 1000,
-  limit: 100,
+  limit: limitFrom("RATE_LIMIT_GENERAL_MAX", 100),
   handler: jsonHandler('Too many requests. Please slow down.'),
 });

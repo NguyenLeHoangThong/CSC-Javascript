@@ -1,0 +1,47 @@
+# Bài 40 — Dependabot tự mở PR cập nhật dependency.
+#
+# GitHub Actions được ghim version (`actions/checkout@v4`) là rủi ro supply-chain dễ
+# quên nhất: app không hỏng khi chúng cũ đi, nên chẳng ai để ý cho tới lúc một action
+# bị deprecate hoặc dính CVE.
+
+version: 2
+updates:
+  # 1. Các action dùng trong ci.yml / cd.yml
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+
+  # 2. npm — mỗi package một entry, Dependabot không tự dò monorepo
+  - package-ecosystem: npm
+    directory: "/csc-shop-api"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(api)"
+    groups:
+      # Gom patch/minor vào 1 PR thay vì hai chục cái. Major để riêng vì cần người
+      # đọc changelog.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: "/csc-shop-fe"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(fe)"
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # 3. Base image trong Dockerfile
+  - package-ecosystem: docker
+    directory: "/csc-shop-api"
+    schedule:
+      interval: weekly

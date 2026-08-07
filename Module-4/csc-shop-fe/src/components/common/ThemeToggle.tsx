@@ -8,7 +8,13 @@ const ThemeToggle = () => {
   const { mode, toggleTheme } = useThemeContext();
 
   return (
-    <IconButton color="inherit" onClick={toggleTheme}>
+    // Nút chỉ có icon thì BẮT BUỘC phải có aria-label, nếu không screen reader chỉ
+    // đọc được "button" và không ai biết nó làm gì.
+    <IconButton
+      color="inherit"
+      onClick={toggleTheme}
+      aria-label={mode === "light" ? "Chuyển sang giao diện tối" : "Chuyển sang giao diện sáng"}
+    >
       {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
     </IconButton>
   );

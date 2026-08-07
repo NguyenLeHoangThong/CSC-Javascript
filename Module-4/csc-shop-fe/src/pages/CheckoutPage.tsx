@@ -1,11 +1,12 @@
 import {
-  Alert, Box, Button, Container, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, TextField, Typography,
+  Alert, Box, Button, Container, FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack, TextField, Typography,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import dayjs from "dayjs";
+import { Link as RouterLink } from "react-router-dom";
 
 import BackButton from "../components/common/BackButton";
 import EmptyState from "../components/common/EmptyState";
@@ -68,11 +69,14 @@ const CheckoutPage = () => {
       setSubmitting(true);
       setSubmitError("");
 
-      // Map cart + form to the backend payload (snapshot title/price/thumbnail per item).
+      // Bài 31 — tên field phải khớp `orderCreateSchema` của backend:
+      // customerName/email/phone (không phải userName/userEmail/userPhone), và mỗi item
+      // chỉ gồm productId + quantity. Backend tự tra giá từ DB nên gửi kèm `price`
+      // vừa thừa vừa nguy hiểm (client sửa giá được).
       const payload: CreateOrderPayload = {
-        userName: formData.name,
-        userEmail: formData.email,
-        userPhone: formData.phone,
+        customerName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
         address: formData.address,
         provinceCode: formData.provinceCode,
         wardCode: formData.wardCode,
@@ -80,10 +84,7 @@ const CheckoutPage = () => {
         note: formData.note,
         items: cartItems.map((item) => ({
           productId: item.id,
-          title: item.title,
-          price: Number(item.price),
           quantity: item.quantity,
-          thumbnail: item.thumbnail,
         })),
       };
 
@@ -98,6 +99,27 @@ const CheckoutPage = () => {
       setSubmitting(false);
     }
   };
+
+  // Đặt hàng xong -> giỏ bị dọn -> `cartItems.length === 0`. Nhánh success PHẢI được
+  // kiểm tra TRƯỚC nhánh giỏ trống, nếu không người mua vừa đặt hàng thành công lại
+  // thấy đúng dòng "Chưa có sản phẩm trong giỏ", còn Snackbar chúc mừng thì bị unmount
+  // ngay lập tức nên không ai kịp nhìn. (Lỗi này do E2E phát hiện.)
+  if (success) {
+    return (
+      <Container maxWidth="sm" sx={{ py: { xs: 4, md: 8 } }}>
+        <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, textAlign: "center" }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>Đặt hàng thành công!</Typography>
+          <Typography sx={{ color: "text.secondary", mb: 3 }}>
+            Cảm ơn bạn đã mua hàng tại CSC Shop. Chúng tôi sẽ liên hệ để xác nhận đơn.
+          </Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "center" }}>
+            <Button variant="contained" component={RouterLink} to="/">Tiếp tục mua sắm</Button>
+            <Button variant="outlined" component={RouterLink} to="/my-orders">Xem đơn hàng của tôi</Button>
+          </Stack>
+        </Paper>
+      </Container>
+    );
+  }
 
   if (cartItems.length === 0) {
     return <EmptyState message="Chưa có sản phẩm trong giỏ. Thêm sản phẩm trước khi thanh toán." showBackHome />;
@@ -127,8 +149,8 @@ const CheckoutPage = () => {
                     name="provinceCode"
                     render={({ field }) => (
                       <FormControl fullWidth error={!!errors.provinceCode}>
-                        <InputLabel>Tỉnh/Thành</InputLabel>
-                        <Select label="Tỉnh/Thành" {...field}>
+                        <InputLabel id="province-label">Tỉnh/Thành</InputLabel>
+                        <Select labelId="province-label" label="Tỉnh/Thành" {...field}>
                           {provinces.map((p) => (
                             <MenuItem key={p.code} value={String(p.code)}>{p.name}</MenuItem>
                           ))}
@@ -144,8 +166,8 @@ const CheckoutPage = () => {
                     name="wardCode"
                     render={({ field }) => (
                       <FormControl fullWidth disabled={!provinceCode || loadingWards} error={!!errors.wardCode}>
-                        <InputLabel>Phường/Xã</InputLabel>
-                        <Select label="Phường/Xã" {...field}>
+                        <InputLabel id="ward-label">Phường/Xã</InputLabel>
+                        <Select labelId="ward-label" label="Phường/Xã" {...field}>
                           {wards.map((w) => (
                             <MenuItem key={w.code} value={String(w.code)}>{w.name}</MenuItem>
                           ))}
@@ -203,10 +225,6 @@ const CheckoutPage = () => {
           </Paper>
         </Grid>
       </Grid>
-
-      <Snackbar open={success} autoHideDuration={3000} onClose={() => setSuccess(false)}>
-        <Alert severity="success">Đặt hàng thành công!</Alert>
-      </Snackbar>
     </Container>
   );
 };

@@ -1,3 +1,8 @@
+// MUST be the first import: `../src/db/prisma` reads DATABASE_URL at module load.
+// `npx prisma db seed` loads .env by itself, but `npm run prisma:seed` (plain ts-node)
+// does not — without this line the seed dies with "Environment variable not found".
+import 'dotenv/config';
+
 import prisma from '../src/db/prisma';
 import bcrypt from 'bcrypt';
 import { slugify } from '../src/utils/slug';

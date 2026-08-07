@@ -32,3 +32,9 @@ dist-ssr
 
 # Bundle analysis output (Bài 37)
 stats.html
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

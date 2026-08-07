@@ -1,0 +1,179 @@
+# Bài 40 — Continuous Integration cho CẢ hai package của CSC Shop.
+#
+# ⚠️ GitHub chỉ đọc `.github/` ở ROOT của repository. File này nằm trong Module-4 vì repo
+# khoá học chứa nhiều module. Muốn nó chạy thật: copy `.github/` lên root repo và đổi
+# `working-directory` thành `Module-4/csc-shop-api` / `Module-4/csc-shop-fe`.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege: workflow này chỉ đọc code.
+permissions:
+  contents: read
+
+# Push mới vào cùng branch sẽ huỷ lần chạy trước thay vì xếp hàng.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. Backend: typecheck + unit test + build ──────────────────────────
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: csc-shop-api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: csc-shop-api/package-lock.json
+
+      - run: npm ci
+
+      # Prisma Client là code sinh ra: thiếu bước này thì mọi `import { Prisma }` là lỗi
+      # type. Không cần database — `generate` chỉ đọc schema.
+      - run: npx prisma generate
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  # ── 2. Frontend: typecheck + unit test + build ─────────────────────────
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: csc-shop-fe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: csc-shop-fe/package-lock.json
+
+      - run: npm ci
+      - run: npm run test:unit
+      # `build` = `tsc -b && vite build` nên đã bao gồm typecheck.
+      - run: npm run build
+
+  # ── 3. E2E: Chromium thật + backend thật + PostgreSQL thật ─────────────
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # Không tốn ~2 phút dựng browser + database nếu unit test đã đỏ.
+    needs: [backend, frontend]
+
+    # PostgreSQL chạy như service container; healthcheck đảm bảo nó nhận kết nối
+    # trước khi step đầu tiên bắt đầu.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: csc_shop_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/csc_shop_e2e
+      NODE_ENV: development
+      PORT: 3000
+      CORS_ORIGINS: http://localhost:5173
+      # Secret giả: E2E không cần token thật, chỉ cần app ký/verify được JWT.
+      JWT_ACCESS_SECRET: ci_access_secret
+      JWT_REFRESH_SECRET: ci_refresh_secret
+      BCRYPT_SALT_ROUNDS: 10
+      # GEMINI_API_KEY cố tình để trống: spec cuối của ai-suggest kiểm tra đúng nhánh
+      # "server chưa cấu hình AI" -> 503 có message tử tế.
+      GEMINI_API_KEY: ""
+      # E2E bắn hàng trăm request từ 1 IP trong ~2 phút; nới trần để limiter không
+      # làm hỏng test (mặc định production vẫn là 100/10/10).
+      RATE_LIMIT_GENERAL_MAX: 100000
+      RATE_LIMIT_AUTH_MAX: 1000
+      RATE_LIMIT_AI_MAX: 1000
+      VITE_API_URL: http://localhost:3000/api/v1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install backend deps
+        working-directory: csc-shop-api
+        run: npm ci
+
+      - name: Install frontend deps
+        working-directory: csc-shop-fe
+        run: npm ci
+
+      - name: Prepare database
+        working-directory: csc-shop-api
+        run: |
+          npx prisma generate
+          npx prisma db push --skip-generate
+          npm run prisma:seed
+
+      # `--with-deps` cài luôn thư viện hệ thống mà Chromium cần trên ubuntu runner.
+      # Chỉ cài chromium: đủ để bắt lỗi và nhanh hơn nhiều so với cả 3 browser.
+      - name: Install Playwright browser
+        working-directory: csc-shop-fe
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts tự khởi động cả backend lẫn frontend rồi chờ /health.
+      - name: Run E2E
+        working-directory: csc-shop-fe
+        run: npm run test:e2e
+
+      # Trace/screenshot/video của lần chạy hỏng — mở bằng `npx playwright show-trace`.
+      - name: Upload report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: csc-shop-fe/playwright-report/
+          retention-days: 7
+
+  # ── 4. Docker image + quét lỗ hổng ─────────────────────────────────────
+  docker:
+    name: Build & scan image
+    runs-on: ubuntu-latest
+    needs: [backend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        working-directory: csc-shop-api
+        run: docker build -t csc-shop-api:${{ github.sha }} .
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: csc-shop-api:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true # đừng fail vì CVE chưa có bản vá
+          exit-code: "1"

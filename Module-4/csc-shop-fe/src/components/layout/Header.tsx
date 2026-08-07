@@ -38,13 +38,13 @@ const Header = ({ search, setSearch }: Props) => {
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, marginLeft: "auto" }}>
             <ThemeToggle />
-            <IconButton component={Link} to="/cart" color="inherit">
+            <IconButton component={Link} to="/cart" color="inherit" aria-label="Giỏ hàng">
               <Badge badgeContent={totalItems} color="secondary"><ShoppingCartIcon /></Badge>
             </IconButton>
 
             {user ? (
               <>
-                <IconButton onClick={(e) => setAnchorEl(e.currentTarget)}>
+                <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Tài khoản">
                   <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>{user.name[0].toUpperCase()}</Avatar>
                 </IconButton>
                 <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>

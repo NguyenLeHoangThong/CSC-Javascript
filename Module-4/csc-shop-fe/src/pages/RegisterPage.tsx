@@ -20,8 +20,14 @@ const RegisterPage = () => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setSubmitError("");
-      // Backend register expects name/email/password; then auto-login for a smooth UX.
-      await authApi.register({ name: data.name, email: data.email, password: data.password });
+      // Backend cũng validate confirmPassword (defence in depth) nên phải gửi kèm;
+      // sau đó tự đăng nhập luôn cho mượt.
+      await authApi.register({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
       await login(data.email, data.password);
       navigate("/");
     } catch (err: any) {
