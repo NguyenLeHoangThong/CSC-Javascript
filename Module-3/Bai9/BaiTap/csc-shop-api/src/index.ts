@@ -13,6 +13,23 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ── Global middleware ──
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowed = [
+      "http://localhost:5173",       // local dev
+      "http://localhost:4173",       // local preview
+      process.env.FE_URL ?? "",      // production FE URL
+    ].filter(Boolean);
+
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+  },
+  allowedHeaders: ["Content-Type", "Authorization"],
+  methods:        ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+}));
 
 app.use(express.json());
 app.use(morgan("dev"));
