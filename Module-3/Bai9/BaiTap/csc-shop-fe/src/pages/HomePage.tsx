@@ -98,7 +98,7 @@ const HomePage = () => {
         if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") {
           return;
         }
-        setError("Currently, products are empty. Please reload the page!!!");
+        setError("No items");
       } finally {
         setLoading(false);
       }
