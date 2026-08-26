@@ -7,13 +7,15 @@ import productRoutes from './routes/productRoutes';
 import orderRoutes from './routes/orderRoutes';
 import statsRoutes from './routes/statsRoutes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import morgan from 'morgan';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // ── Global middleware ──
-app.use(cors());
+
 app.use(express.json());
+app.use(morgan("dev"));
 
 // ── Health check ──
 app.get('/health', (req, res) => {
