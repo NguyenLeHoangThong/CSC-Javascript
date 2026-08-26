@@ -10,6 +10,10 @@ import { AuthProvider } from "./context/AuthProvider";
 import { CartProvider } from "./context/CartProvider";
 import { ThemeContextProvider, useThemeContext } from "./theme/theme";
 
+import { SpeedInsights } from "@vercel/speed-insights/react"
+import { Analytics } from '@vercel/analytics/react';
+
+
 const Providers = () => {
   const { theme } = useThemeContext();
 
@@ -22,6 +26,8 @@ const Providers = () => {
         <CartProvider>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <RouterProvider router={router} />
+            <SpeedInsights />
+            <Analytics />
           </LocalizationProvider>
         </CartProvider>
       </AuthProvider>
