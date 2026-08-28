@@ -15,15 +15,22 @@ jobs:
     name: Migrate CSC shop database
     defaults:
       run:
-        working-directory: ./Module-3/Bai9/BaiTap/csc-shop-api
+        working-directory: Module-3/Bai9/BaiTap/csc-shop-api
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+          
       - name: Install node
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: Install backend source
         id: install_backend_source
         run: npm ci && npm run prisma:generate
+
       - name: Migrate database
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
