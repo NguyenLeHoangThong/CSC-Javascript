@@ -1,0 +1,17 @@
+name: "Migrate database"
+
+on:
+  push:
+    branches:
+      - main
+
+
+jobs:
+  test_github_action_job:
+    runs-on: ubuntu-24.04-arm
+    name: Test
+    steps:
+      - name: Print hello to user
+        id: print_hello
+        run: |
+          echo "Hello, this is GitHub action"
