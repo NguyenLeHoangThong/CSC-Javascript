@@ -4,14 +4,27 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "Module-3/Bai9/BaiTap/csc-shop-api/prisma/schema.prisma"
 
 
 jobs:
-  test_github_action_job:
+  migrate_database:
     runs-on: ubuntu-24.04-arm
-    name: Test
+    name: Migrate CSC shop database
+    defaults:
+      run:
+        working-directory: Module-3/Bai9/BaiTap/csc-shop-api
     steps:
-      - name: Print hello to user
-        id: print_hello
-        run: |
-          echo "Hello, this is GitHub action"
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install backend source
+        id: install_backend_source
+        run: npm ci && npm run prisma:generate
+      - name: Migrate database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run prisma:migrate
+
