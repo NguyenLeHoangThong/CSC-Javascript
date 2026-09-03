@@ -7,6 +7,7 @@ on:
     paths:
       - "Module-3/Bai9/BaiTap/csc-shop-api/prisma"
       - ".github/workflows/migrate-database.yaml"
+  workflow_dispatch:
 
 
 jobs:
