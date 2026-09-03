@@ -108,3 +108,7 @@ model OrderItem {
   @@map("order_items")
 }
 
+model Shipper {
+  id   Int    @id @default(autoincrement())
+  name String
+}
